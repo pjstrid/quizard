@@ -1,35 +1,159 @@
-import { useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { useRef, useState, type ComponentRef } from 'react';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { ChoiceList } from '@/components/choice-list';
+import { useSecondsLeft } from '@/components/countdown';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { parseNumber, typeHint, type AnswerPayload, type ChoiceConfig, type NumericConfig } from '@/lib/question-types';
+import {
+  parseNumber,
+  typeHint,
+  type AnswerPayload,
+  type ChoiceConfig,
+  type FreeTextConfig,
+  type NumericConfig,
+} from '@/lib/question-types';
 import type { Question } from '@/lib/types';
 
 type Props = {
   question: Question;
   busy: boolean;
   onSubmit: (payload: AnswerPayload) => void;
+  /** Shared start of the question, for the list's auto-submit. */
+  startedAt?: string | null;
 };
 
 /**
  * The team's input for the current question. Render with `key={question.id}`
  * so the state starts fresh for every question.
  */
-export function AnswerInput({ question, busy, onSubmit }: Props) {
+export function AnswerInput(props: Props) {
+  const { question } = props;
   const hint = typeHint(question);
   return (
     <View style={{ gap: Spacing.three }}>
       {hint && <ThemedText themeColor="textSecondary">{hint}</ThemedText>}
       {question.type === 'range' || question.type === 'closest' ? (
-        <NumericInput question={question} busy={busy} onSubmit={onSubmit} />
+        <NumericInput {...props} />
+      ) : question.type === 'free_text' ? (
+        <FreeTextInput {...props} />
+      ) : question.type === 'list_timed' ? (
+        <ListInput {...props} />
       ) : (
-        <ChoiceInput question={question} busy={busy} onSubmit={onSubmit} />
+        <ChoiceInput {...props} />
       )}
     </View>
+  );
+}
+
+function FreeTextInput({ question, busy, onSubmit }: Props) {
+  const theme = useTheme();
+  const fields = (question.config as FreeTextConfig).fields;
+  const [answers, setAnswers] = useState(() => Array.from({ length: fields }, () => ''));
+  const anyFilled = answers.some((a) => a.trim());
+
+  return (
+    <>
+      {answers.map((text, i) => (
+        <TextInput
+          key={i}
+          value={text}
+          onChangeText={(t) => setAnswers((prev) => prev.map((a, j) => (j === i ? t : a)))}
+          placeholder={fields > 1 ? `Svar ${i + 1}` : 'Ert svar'}
+          placeholderTextColor={theme.textSecondary}
+          accessibilityLabel={fields > 1 ? `Svar ${i + 1}` : 'Ert svar'}
+          maxLength={120}
+          style={[styles.input, styles.textInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundElement }]}
+        />
+      ))}
+      <Button
+        title="Lås in svar"
+        onPress={() => onSubmit({ answers: answers.map((a) => a.trim()) })}
+        loading={busy}
+        disabled={!anyFilled}
+      />
+    </>
+  );
+}
+
+const MAX_ITEMS = 100;
+
+/**
+ * Timed list: add as many entries as possible. The list is locked in
+ * automatically when the time runs out (or earlier with the button).
+ */
+function ListInput({ question, busy, onSubmit, startedAt }: Props) {
+  const theme = useTheme();
+  const [items, setItems] = useState<string[]>([]);
+  const [draft, setDraft] = useState('');
+  const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
+
+  function submit() {
+    const text = draft.trim();
+    // Include what is still in the input field.
+    const all = text && items.length < MAX_ITEMS ? [...items, text] : items;
+    if (all.length > 0) onSubmit({ items: all });
+  }
+
+  const secondsLeft = useSecondsLeft(startedAt ?? null, question.time_limit_s, submit);
+  const timeUp = secondsLeft === 0;
+
+  function add() {
+    const text = draft.trim();
+    if (!text || items.length >= MAX_ITEMS || timeUp) return;
+    setItems((prev) => [...prev, text]);
+    setDraft('');
+    inputRef.current?.focus();
+  }
+
+  return (
+    <>
+      <View style={styles.row}>
+        <TextInput
+          ref={inputRef}
+          value={draft}
+          onChangeText={setDraft}
+          onSubmitEditing={add}
+          submitBehavior="submit"
+          editable={!timeUp}
+          placeholder="Skriv ett svar och tryck enter"
+          placeholderTextColor={theme.textSecondary}
+          accessibilityLabel="Nytt svar"
+          maxLength={80}
+          autoFocus
+          style={[styles.input, styles.textInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundElement }]}
+        />
+        <Button title="+" onPress={add} disabled={!draft.trim() || timeUp} />
+      </View>
+
+      <ThemedText type="smallBold" themeColor="textSecondary">
+        {items.length} SVAR
+      </ThemedText>
+      <View style={styles.items}>
+        {items.map((item, i) => (
+          <Pressable
+            key={`${i}-${item}`}
+            accessibilityRole="button"
+            accessibilityLabel={`Ta bort ${item}`}
+            disabled={timeUp}
+            onPress={() => setItems((prev) => prev.filter((_, j) => j !== i))}
+            style={[styles.item, { borderColor: theme.border, backgroundColor: theme.backgroundElement }]}>
+            <ThemedText>{item}</ThemedText>
+            <ThemedText themeColor="textSecondary">✕</ThemedText>
+          </Pressable>
+        ))}
+      </View>
+
+      {timeUp ? (
+        <ThemedText themeColor="textSecondary" style={{ textAlign: 'center' }}>
+          {busy ? 'Skickar in listan …' : items.length ? 'Tiden är ute – listan skickas in.' : 'Tiden är ute.'}
+        </ThemedText>
+      ) : (
+        <Button title="Lås in listan nu" variant="secondary" onPress={submit} loading={busy} disabled={items.length === 0} />
+      )}
+    </>
   );
 }
 
@@ -129,6 +253,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     fontSize: 24,
     fontWeight: 700,
+  },
+  textInput: { fontSize: 20, fontWeight: 600 },
+  items: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.one,
   },
   dash: { fontSize: 24, fontWeight: 700 },
   unit: { fontSize: 20, fontWeight: 600 },

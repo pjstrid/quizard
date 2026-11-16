@@ -10,6 +10,7 @@ import { friendlyError, supabase } from '@/lib/supabase';
 import type { QuestionType } from '@/lib/types';
 
 const TIME_LIMITS: (number | null)[] = [null, 15, 30, 60];
+const LIST_TIME_LIMITS = [30, 60, 90, 120];
 
 /** Option rules per choice type – the database validates the same limits. */
 const OPTION_RULES: Partial<Record<QuestionType, { start: number; min: number; max: number; correct: [number, number] }>> = {
@@ -24,7 +25,7 @@ function initialOptions(type: QuestionType) {
 }
 
 /**
- * Form for the auto-graded question types. A stepping stone until the full quiz editor (#4).
+ * Form for every question template. A stepping stone until the full quiz editor (#4).
  */
 export function QuestionForm({ quizId, onCreated }: { quizId: string; onCreated: () => void }) {
   const theme = useTheme();
@@ -34,17 +35,24 @@ export function QuestionForm({ quizId, onCreated }: { quizId: string; onCreated:
   const [correct, setCorrect] = useState<number[]>([]);
   const [value, setValue] = useState('');
   const [unit, setUnit] = useState('');
+  const [fields, setFields] = useState(1);
+  const [keyAnswers, setKeyAnswers] = useState(['', '', '', '']);
+  const [listKey, setListKey] = useState('');
   const [timeLimit, setTimeLimit] = useState<number | null>(30);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const rules = OPTION_RULES[type];
+  const isList = type === 'list_timed';
+  const isFreeText = type === 'free_text';
 
   function changeType(next: QuestionType) {
     setType(next);
     setOptions(initialOptions(next));
     setCorrect([]);
     setError(null);
+    // A list question always runs against the clock.
+    if (next === 'list_timed' && !LIST_TIME_LIMITS.includes(timeLimit ?? 0)) setTimeLimit(60);
   }
 
   function toggleCorrect(index: number) {
@@ -67,13 +75,23 @@ export function QuestionForm({ quizId, onCreated }: { quizId: string; onCreated:
     if (filled.length < rules.min) problem = `Fyll i minst ${rules.min} alternativ.`;
     else if (correctMapped.length < rules.correct[0])
       problem = rules.correct[0] === 1 ? 'Markera rätt svar.' : `Markera ${rules.correct[0]}–${rules.correct[1]} rätta svar.`;
-  } else if (numericValue === null) problem = 'Ange rätt svar som ett tal.';
+  } else if (isList) {
+    if (!timeLimit) problem = 'Välj en tidsgräns.';
+  } else if (!isFreeText && numericValue === null) problem = 'Ange rätt svar som ett tal.';
 
   function buildRequest() {
     if (rules) {
       const config: Record<string, unknown> = { options: filled.map((o) => o.text) };
       if (type === 'multi_choice') config.pick = correctMapped.length;
       return { config, answer: { correct: type === 'multi_choice' ? correctMapped : correctMapped[0] } };
+    }
+    if (isFreeText) {
+      const answers = keyAnswers.slice(0, fields).map((a) => a.trim()).filter(Boolean);
+      return { config: { fields }, answer: { answers } };
+    }
+    if (isList) {
+      const answers = listKey.split('\n').map((a) => a.trim()).filter(Boolean).slice(0, 300);
+      return { config: {}, answer: { answers } };
     }
     return { config: unit.trim() ? { unit: unit.trim() } : {}, answer: { value: numericValue } };
   }
@@ -96,6 +114,8 @@ export function QuestionForm({ quizId, onCreated }: { quizId: string; onCreated:
     setOptions(initialOptions(type));
     setCorrect([]);
     setValue('');
+    setKeyAnswers(['', '', '', '']);
+    setListKey('');
     onCreated();
   }
 
@@ -154,7 +174,54 @@ export function QuestionForm({ quizId, onCreated }: { quizId: string; onCreated:
         </>
       )}
 
-      {!rules && (
+      {isFreeText && (
+        <>
+          <ThemedText type="smallBold">Antal svar per lag</ThemedText>
+          <Chips
+            items={[1, 2, 3, 4].map((n) => ({ key: String(n), label: String(n) }))}
+            value={String(fields)}
+            onChange={(k) => setFields(Number(k))}
+          />
+          <ThemedText type="smallBold">Facit (valfritt)</ThemedText>
+          <ThemedText themeColor="textSecondary">
+            Svar som matchar facit föreslås som godkända. Du rättar alltid själv innan svaret visas.
+          </ThemedText>
+          {keyAnswers.slice(0, fields).map((text, i) => (
+            <TextInput
+              key={i}
+              value={text}
+              onChangeText={(t) => setKeyAnswers((prev) => prev.map((a, j) => (j === i ? t : a)))}
+              placeholder={fields > 1 ? `Rätt svar ${i + 1}` : 'Rätt svar'}
+              placeholderTextColor={theme.textSecondary}
+              maxLength={120}
+              style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
+            />
+          ))}
+        </>
+      )}
+
+      {isList && (
+        <>
+          <ThemedText type="smallBold">Godkända svar (valfritt, ett per rad)</ThemedText>
+          <ThemedText themeColor="textSecondary">
+            Svar som finns i listan föreslås som godkända. Du rättar alltid själv innan svaret visas.
+          </ThemedText>
+          <TextInput
+            value={listKey}
+            onChangeText={setListKey}
+            placeholder={'Skåne\nUppland\nDalarna'}
+            placeholderTextColor={theme.textSecondary}
+            multiline
+            style={[
+              styles.input,
+              styles.multiline,
+              { color: theme.text, borderColor: theme.border, backgroundColor: theme.background },
+            ]}
+          />
+        </>
+      )}
+
+      {!rules && !isFreeText && !isList && (
         <View style={styles.optionRow}>
           <View style={{ flex: 2 }}>
             <TextField
@@ -173,7 +240,7 @@ export function QuestionForm({ quizId, onCreated }: { quizId: string; onCreated:
 
       <ThemedText type="smallBold">Tidsgräns</ThemedText>
       <Chips
-        items={TIME_LIMITS.map((l) => ({ key: String(l), label: l ? `${l} s` : 'Ingen' }))}
+        items={(isList ? LIST_TIME_LIMITS : TIME_LIMITS).map((l) => ({ key: String(l), label: l ? `${l} s` : 'Ingen' }))}
         value={String(timeLimit)}
         onChange={(k) => setTimeLimit(k === 'null' ? null : Number(k))}
       />
@@ -227,6 +294,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   input: { flex: 1, minHeight: 44, borderWidth: 1, borderRadius: 12, paddingHorizontal: Spacing.three, fontSize: 16 },
+  multiline: { minHeight: 120, paddingTop: Spacing.two, textAlignVertical: 'top' },
   chips: { flexDirection: 'row', gap: Spacing.two, flexWrap: 'wrap' },
   chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
 });

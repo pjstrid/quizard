@@ -63,6 +63,8 @@ export type Answer = {
   locked_at: string | null;
   points: number | null;
   graded: boolean;
+  /** Manual types: one accepted/rejected flag per field or list item. */
+  grading: boolean[] | null;
 };
 
 export type ScoreRow = {
