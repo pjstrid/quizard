@@ -13,7 +13,8 @@ export default function HostLayout() {
   return (
     <Stack screenOptions={{ headerBackTitle: 'Tillbaka' }}>
       <Stack.Screen name="index" options={{ title: 'Mina quiz' }} />
-      <Stack.Screen name="session/[id]" options={{ title: 'Lobby' }} />
+      <Stack.Screen name="quiz/[id]" options={{ title: 'Quiz' }} />
+      <Stack.Screen name="session/[id]" options={{ title: 'Spel' }} />
     </Stack>
   );
 }
