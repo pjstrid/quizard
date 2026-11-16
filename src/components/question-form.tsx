@@ -5,12 +5,24 @@ import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ErrorText, TextField } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { CREATABLE_TYPES, LETTERS, parseNumber } from '@/lib/question-types';
+import {
+  CREATABLE_TYPES,
+  LETTERS,
+  correctIndexes,
+  isNumericType,
+  parseNumber,
+  type ChoiceConfig,
+  type FreeTextConfig,
+  type ManualKey,
+  type NumericConfig,
+  type NumericKey,
+} from '@/lib/question-types';
 import { friendlyError, supabase } from '@/lib/supabase';
-import type { QuestionType } from '@/lib/types';
+import type { Question, QuestionType } from '@/lib/types';
 
 const TIME_LIMITS: (number | null)[] = [null, 15, 30, 60];
 const LIST_TIME_LIMITS = [30, 60, 90, 120];
+const POINTS = [1, 2, 3, 5];
 
 /** Option rules per choice type – the database validates the same limits. */
 const OPTION_RULES: Partial<Record<QuestionType, { start: number; min: number; max: number; correct: [number, number] }>> = {
@@ -24,21 +36,50 @@ function initialOptions(type: QuestionType) {
   return Array.from({ length: OPTION_RULES[type]?.start ?? 0 }, () => '');
 }
 
-/**
- * Form for every question template. A stepping stone until the full quiz editor (#4).
- */
-export function QuestionForm({ quizId, onCreated }: { quizId: string; onCreated: () => void }) {
+/** Form state for an existing question (edit mode). */
+function stateFrom(question: Question, key: unknown) {
+  const config = question.config as ChoiceConfig & NumericConfig & FreeTextConfig;
+  const rules = OPTION_RULES[question.type];
+  // Pad choice options so an optional extra option can still be filled in.
+  const options = rules
+    ? [...config.options, ...Array.from({ length: Math.max(0, rules.start - config.options.length) }, () => '')]
+    : [];
+  const keyAnswers = (key as ManualKey | null)?.answers ?? [];
+  return {
+    options,
+    correct: rules ? correctIndexes(key) : [],
+    value: isNumericType(question.type) ? String((key as NumericKey | null)?.value ?? '') : '',
+    unit: config.unit ?? '',
+    fields: config.fields ?? 1,
+    keyAnswers: [...keyAnswers, '', '', '', ''].slice(0, 4),
+    listKey: question.type === 'list_timed' ? keyAnswers.join('\n') : '',
+  };
+}
+
+type Props = {
+  quizId: string;
+  /** Edit this question instead of creating a new one. Render with `key={question.id}`. */
+  question?: Question;
+  answerKey?: unknown;
+  onSaved: () => void;
+  onCancel?: () => void;
+};
+
+/** Create or edit a question using one of the seven templates. */
+export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }: Props) {
   const theme = useTheme();
-  const [type, setType] = useState<QuestionType>('single_choice');
-  const [prompt, setPrompt] = useState('');
-  const [options, setOptions] = useState(() => initialOptions('single_choice'));
-  const [correct, setCorrect] = useState<number[]>([]);
-  const [value, setValue] = useState('');
-  const [unit, setUnit] = useState('');
-  const [fields, setFields] = useState(1);
-  const [keyAnswers, setKeyAnswers] = useState(['', '', '', '']);
-  const [listKey, setListKey] = useState('');
-  const [timeLimit, setTimeLimit] = useState<number | null>(30);
+  const initial = question ? stateFrom(question, answerKey) : null;
+  const [type, setType] = useState<QuestionType>(question?.type ?? 'single_choice');
+  const [prompt, setPrompt] = useState(question?.prompt ?? '');
+  const [options, setOptions] = useState(() => initial?.options ?? initialOptions('single_choice'));
+  const [correct, setCorrect] = useState<number[]>(initial?.correct ?? []);
+  const [value, setValue] = useState(initial?.value ?? '');
+  const [unit, setUnit] = useState(initial?.unit ?? '');
+  const [fields, setFields] = useState(initial?.fields ?? 1);
+  const [keyAnswers, setKeyAnswers] = useState(initial?.keyAnswers ?? ['', '', '', '']);
+  const [listKey, setListKey] = useState(initial?.listKey ?? '');
+  const [timeLimit, setTimeLimit] = useState<number | null>(question ? question.time_limit_s : 30);
+  const [points, setPoints] = useState(question?.points ?? 1);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -100,29 +141,33 @@ export function QuestionForm({ quizId, onCreated }: { quizId: string; onCreated:
     setError(null);
     setBusy(true);
     const { config, answer } = buildRequest();
-    const { error } = await supabase.rpc('create_question', {
-      p_quiz_id: quizId,
+    const params = {
       p_type: type,
       p_prompt: prompt.trim(),
       p_config: config,
       p_answer: answer,
       p_time_limit_s: timeLimit,
-    });
+      p_points: points,
+    };
+    const { error } = question
+      ? await supabase.rpc('update_question', { p_question_id: question.id, ...params })
+      : await supabase.rpc('create_question', { p_quiz_id: quizId, ...params });
     setBusy(false);
     if (error) return setError(friendlyError(error));
+    if (question) return onSaved();
     setPrompt('');
     setOptions(initialOptions(type));
     setCorrect([]);
     setValue('');
     setKeyAnswers(['', '', '', '']);
     setListKey('');
-    onCreated();
+    onSaved();
   }
 
   return (
     <Card>
       <ThemedText type="smallBold" themeColor="textSecondary">
-        NY FRÅGA
+        {question ? 'REDIGERA FRÅGA' : 'NY FRÅGA'}
       </ThemedText>
       <Chips
         items={CREATABLE_TYPES.map((t) => ({ key: t.type, label: t.label }))}
@@ -245,9 +290,22 @@ export function QuestionForm({ quizId, onCreated }: { quizId: string; onCreated:
         onChange={(k) => setTimeLimit(k === 'null' ? null : Number(k))}
       />
 
+      <ThemedText type="smallBold">Poäng</ThemedText>
+      <Chips
+        items={POINTS.map((p) => ({ key: String(p), label: `${p} p` }))}
+        value={String(points)}
+        onChange={(k) => setPoints(Number(k))}
+      />
+
       <ErrorText>{error}</ErrorText>
       {problem && prompt.trim() !== '' && <ThemedText themeColor="textSecondary">{problem}</ThemedText>}
-      <Button title="Lägg till fråga" onPress={save} loading={busy} disabled={problem !== null} />
+      <Button
+        title={question ? 'Spara ändringar' : 'Lägg till fråga'}
+        onPress={save}
+        loading={busy}
+        disabled={problem !== null}
+      />
+      {onCancel && <Button title="Avbryt" variant="secondary" onPress={onCancel} />}
     </Card>
   );
 }

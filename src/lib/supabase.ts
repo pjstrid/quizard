@@ -42,6 +42,7 @@ export function friendlyError(error: { message: string } | null | undefined): st
     not_in_session: 'Ni är inte med i det här quizet.',
     not_session_host: 'Bara quizmastern kan göra det.',
     not_quiz_owner: 'Det här quizet är inte ditt.',
+    quiz_in_play: 'Quizet spelas just nu. Avsluta spelet innan du ändrar frågorna.',
     no_questions: 'Lägg till minst en fråga innan du startar.',
     invalid_state: 'Det går inte just nu. Försök igen.',
     answers_closed: 'Svaren är stängda för den här frågan.',
