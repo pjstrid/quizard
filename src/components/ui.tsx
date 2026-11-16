@@ -34,15 +34,19 @@ type ButtonProps = {
   variant?: 'primary' | 'secondary' | 'danger';
   loading?: boolean;
   disabled?: boolean;
+  /** Screen reader label when the title is a symbol (e.g. ↑). */
+  accessibilityLabel?: string;
 };
 
-export function Button({ title, onPress, variant = 'primary', loading, disabled }: ButtonProps) {
+export function Button({ title, onPress, variant = 'primary', loading, disabled, accessibilityLabel }: ButtonProps) {
   const theme = useTheme();
   const isPrimary = variant === 'primary';
   const color = variant === 'danger' ? theme.danger : isPrimary ? theme.onPrimary : theme.text;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityState={{ disabled: !!(disabled || loading), busy: !!loading }}
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [
@@ -93,7 +97,7 @@ export function ConfirmButton({
       return;
     }
     setArmed(true);
-    timer.current = setTimeout(() => setArmed(false), 3000);
+    timer.current = setTimeout(() => setArmed(false), 4000);
   }
 
   return (
