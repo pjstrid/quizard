@@ -198,7 +198,7 @@ export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }:
                     { borderColor: isCorrect ? theme.success : theme.border },
                     isCorrect && { backgroundColor: theme.success },
                   ]}>
-                  <ThemedText style={{ fontWeight: 800, color: isCorrect ? theme.onPrimary : theme.text }}>
+                  <ThemedText style={{ fontWeight: 800, color: isCorrect ? theme.onSuccess : theme.text }}>
                     {isCorrect ? '✓' : LETTERS[i]}
                   </ThemedText>
                 </Pressable>

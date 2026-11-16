@@ -180,7 +180,11 @@ function FinishedView({ session, team, onLeave }: { session: GameSession; team: 
       </ThemedText>
       {place && (
         <ThemedText style={[styles.center, { fontSize: 22 }]}>
-          {place === 1 ? '🏆 Ni vann!' : `Ni kom på plats ${place}`}
+          {mine && mine.score === 0
+            ? 'Inga poäng den här gången'
+            : place === 1
+              ? '🏆 Ni vann!'
+              : `Ni kom på plats ${place}`}
         </ThemedText>
       )}
       <Scoreboard rows={scores} title="SLUTRESULTAT" highlightTeamId={team.id} />

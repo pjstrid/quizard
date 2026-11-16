@@ -41,7 +41,8 @@ type ButtonProps = {
 export function Button({ title, onPress, variant = 'primary', loading, disabled, accessibilityLabel }: ButtonProps) {
   const theme = useTheme();
   const isPrimary = variant === 'primary';
-  const color = variant === 'danger' ? theme.danger : isPrimary ? theme.onPrimary : theme.text;
+  const inactive = disabled || loading;
+  const color = variant === 'danger' ? theme.danger : isPrimary ? (inactive ? theme.textSecondary : theme.onPrimary) : theme.text;
   return (
     <Pressable
       accessibilityRole="button"
@@ -52,15 +53,16 @@ export function Button({ title, onPress, variant = 'primary', loading, disabled,
       style={({ pressed }) => [
         styles.button,
         isPrimary
-          ? { backgroundColor: theme.primary }
-          : { backgroundColor: theme.backgroundElement, borderColor: theme.border, borderWidth: 1 },
-        (disabled || loading) && { opacity: 0.5 },
+          ? // A dimmed yellow looks muddy on dark grey, so inactive primary buttons turn grey.
+            { backgroundColor: inactive ? theme.backgroundSelected : theme.primary }
+          : { borderWidth: 1.5, borderColor: variant === 'danger' ? theme.danger : theme.border },
+        inactive && !isPrimary && { opacity: 0.5 },
         pressed && { opacity: 0.8 },
       ]}>
       {loading ? (
         <ActivityIndicator color={color} />
       ) : (
-        <ThemedText style={{ color, fontWeight: 700 }}>{title}</ThemedText>
+        <ThemedText style={{ color, fontWeight: 800, fontSize: 17 }}>{title}</ThemedText>
       )}
     </Pressable>
   );
@@ -115,7 +117,8 @@ export function TextField({ label, ...props }: TextInputProps & { label: string 
         {...props}
         style={[
           styles.input,
-          { color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundElement },
+          // Inputs sit on cards, so they use the darker base color.
+          { color: theme.text, borderColor: theme.border, backgroundColor: theme.background },
           props.style,
         ]}
       />

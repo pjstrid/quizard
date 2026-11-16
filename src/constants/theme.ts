@@ -1,40 +1,39 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://unistyl.es/), etc.
- */
-
 import '@/global.css';
 
 import { Platform } from 'react-native';
 
+/**
+ * QUIZARD theme – dark, high contrast, readable on a TV across the room (#12).
+ * Contrast ratios (WCAG) are noted next to the pairs they are used in.
+ *
+ * - Yellow (`primary`) is for interaction and highlights: the primary button,
+ *   the selected answer, logo, join code, timer and points. Use it sparingly.
+ * - Answer options are light grey with near-black text.
+ * - Right/wrong is always shown with an icon (✓ / ✗) as well as color.
+ */
 export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
-    primary: '#6E56CF',
-    onPrimary: '#ffffff',
-    border: '#D9D9E0',
-    danger: '#DC3E42',
-    success: '#2B9A66',
-  },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-    primary: '#9E8CFC',
-    onPrimary: '#14121F',
-    border: '#3A3A44',
-    danger: '#FF6369',
-    success: '#3DD68C',
-  },
+  background: '#1E2022', // base
+  backgroundElement: '#2A2D31', // cards
+  backgroundSelected: '#34383D',
+  border: '#43484E',
+  text: '#FFFFFF', // 16.3 on background
+  textSecondary: '#B4BBC2', // 8.4 on background, 7.1 on cards
+
+  primary: '#FFD200', // yellow, 11.3 on background
+  onPrimary: '#111111', // 13.0 on yellow
+
+  answer: '#E0E4E8', // answer options
+  onAnswer: '#111111', // 14.8 on answer
+
+  success: '#2ECC71', // 7.8 as text on background
+  onSuccess: '#111111', // 9.0 on green (white would only be 2.1)
+
+  danger: '#FF7A70', // red for text/borders, 6.4 on background
+  dangerFill: '#E74C3C', // filled "wrong" state
+  onDanger: '#111111', // 4.9 on dangerFill (white would only be 3.8)
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+export type ThemeColor = keyof typeof Colors;
 
 export const Fonts = Platform.select({
   ios: {

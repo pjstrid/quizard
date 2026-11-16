@@ -1,16 +1,27 @@
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
-import { useColorScheme } from 'react-native';
+import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
+import { Colors } from '@/constants/theme';
 import { Screen } from '@/components/ui';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { AuthProvider } from '@/providers/auth-provider';
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+/** Navigation chrome (headers, backgrounds) in the QUIZARD palette. */
+const navigationTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: Colors.primary,
+    background: Colors.background,
+    card: Colors.background,
+    text: Colors.text,
+    border: Colors.border,
+  },
+};
 
+export default function RootLayout() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={navigationTheme}>
       {isSupabaseConfigured ? (
         <AuthProvider>
           <Stack screenOptions={{ headerBackTitle: 'Tillbaka' }}>

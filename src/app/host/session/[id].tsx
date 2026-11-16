@@ -188,7 +188,8 @@ function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
 
 function FinishedView({ session }: { session: GameSession }) {
   const scores = useScoreboard(session.id, session.status);
-  const winners = scores.filter((s) => scores[0] && s.score === scores[0].score);
+  // Nobody wins with zero points.
+  const winners = scores.filter((s) => s.score > 0 && s.score === scores[0].score);
 
   return (
     <>
@@ -208,6 +209,7 @@ function FinishedView({ session }: { session: GameSession }) {
 
 const styles = StyleSheet.create({
   center: { textAlign: 'center' },
-  code: { fontSize: 64, lineHeight: 76, fontWeight: 800, letterSpacing: 10, textAlign: 'center' },
+  // Six characters must fit on one line on a 320 px wide phone.
+  code: { fontSize: 48, lineHeight: 58, fontWeight: 900, letterSpacing: 6, textAlign: 'center' },
   prompt: { fontSize: 28, lineHeight: 36, fontWeight: 700 },
 });

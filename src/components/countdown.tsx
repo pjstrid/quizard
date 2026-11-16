@@ -43,12 +43,15 @@ export function Countdown({ secondsLeft }: { secondsLeft: number | null }) {
   if (secondsLeft === null) return null;
   return (
     <ThemedText
+      accessibilityLiveRegion="polite"
       style={{
-        fontSize: 40,
-        lineHeight: 48,
-        fontWeight: 800,
+        fontSize: 56,
+        lineHeight: 64,
+        fontWeight: 900,
         textAlign: 'center',
-        color: secondsLeft <= 5 ? theme.danger : theme.text,
+        fontVariant: ['tabular-nums'],
+        // Yellow timer, red for the last five seconds.
+        color: secondsLeft <= 5 ? theme.danger : theme.primary,
       }}>
       {secondsLeft > 0 ? secondsLeft : 'Tiden är ute!'}
     </ThemedText>

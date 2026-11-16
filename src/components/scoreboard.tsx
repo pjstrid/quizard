@@ -41,7 +41,16 @@ export function Scoreboard({ rows, title = 'STÄLLNING', highlightTeamId }: Prop
             </ThemedText>
             <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: row.color }} />
             <ThemedText style={{ flex: 1, fontWeight: mine ? 800 : 500 }}>{row.name}</ThemedText>
-            <ThemedText style={{ fontWeight: 800, fontSize: 20 }}>{row.score}</ThemedText>
+            {/* The leader's score is the one yellow number on the board. */}
+            <ThemedText
+              style={{
+                fontWeight: 900,
+                fontSize: 20,
+                fontVariant: ['tabular-nums'],
+                color: place === 1 && row.score > 0 ? theme.primary : theme.text,
+              }}>
+              {row.score}
+            </ThemedText>
           </View>
         );
       })}

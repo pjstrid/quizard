@@ -166,13 +166,17 @@ function Playing({ session, teams, wide }: { session: GameSession; teams: Team[]
 }
 
 function Finished({ session }: { session: GameSession }) {
+  const theme = useTheme();
   const scores = useScoreboard(session.id, `${session.status}-${session.scores_version}`);
-  const winners = scores.filter((s) => scores[0] && s.score === scores[0].score);
+  // Nobody wins with zero points.
+  const winners = scores.filter((s) => s.score > 0 && s.score === scores[0].score);
   return (
     <View style={{ gap: Spacing.four, alignItems: 'center' }}>
       <ThemedText style={styles.prompt}>Quizet är slut!</ThemedText>
       {winners.length > 0 && (
-        <ThemedText style={styles.winner}>🏆 {winners.map((w) => w.name).join(' & ')}</ThemedText>
+        <ThemedText style={[styles.winner, { color: theme.primary }]}>
+          🏆 {winners.map((w) => w.name).join(' & ')}
+        </ThemedText>
       )}
       <View style={{ width: '100%', maxWidth: 720 }}>
         <Scoreboard rows={scores} title="SLUTRESULTAT" />
