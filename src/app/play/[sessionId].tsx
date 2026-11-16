@@ -13,7 +13,7 @@ import { Spacing } from '@/constants/theme';
 import { useAnswers, useCurrentQuestion, useScoreboard } from '@/hooks/use-game';
 import { useSessionLive } from '@/hooks/use-session-live';
 import { useTheme } from '@/hooks/use-theme';
-import type { AnswerPayload } from '@/lib/question-types';
+import { resultText, type AnswerPayload } from '@/lib/question-types';
 import { friendlyError, supabase } from '@/lib/supabase';
 import type { GameSession, Question, Team } from '@/lib/types';
 import { useAuth } from '@/providers/auth-provider';
@@ -145,16 +145,16 @@ function AnswerArea({
         </ThemedText>
       )}
 
-      {revealed && <ResultBanner points={myAnswer?.points ?? null} answered={!!myAnswer} />}
+      {revealed && (
+        <ResultBanner {...resultText(question, myAnswer?.payload, answerKey, myAnswer?.points ?? null)} />
+      )}
     </>
   );
 }
 
-function ResultBanner({ points, answered }: { points: number | null; answered: boolean }) {
+function ResultBanner({ text, tone }: ReturnType<typeof resultText>) {
   const theme = useTheme();
-  const right = (points ?? 0) > 0;
-  const text = !answered ? 'Inget svar' : right ? `Rätt! +${points}` : 'Fel svar';
-  const color = !answered ? theme.textSecondary : right ? theme.success : theme.danger;
+  const color = { success: theme.success, danger: theme.danger, neutral: theme.textSecondary }[tone];
   return <ThemedText style={[styles.result, { color }]}>{text}</ThemedText>;
 }
 

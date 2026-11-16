@@ -113,3 +113,30 @@ export function describeKey(question: Question, key: unknown): string | null {
   if (!key || !isNumericType(question.type)) return null;
   return formatNumber((key as NumericKey).value, (question.config as NumericConfig).unit);
 }
+
+/** Result line shown on the team's phone after reveal. */
+export function resultText(
+  question: Question,
+  payload: unknown,
+  key: unknown,
+  points: number | null,
+): { text: string; tone: 'success' | 'danger' | 'neutral' } {
+  if (payload == null) return { text: 'Inget svar', tone: 'neutral' };
+  const won = (points ?? 0) > 0;
+
+  if (question.type === 'multi_choice' && key) {
+    const correct = correctIndexes(key);
+    const hits = pickedIndexes(payload).filter((i) => correct.includes(i)).length;
+    if (correct.length > 2 && won && hits < correct.length) {
+      return { text: `${hits} av ${correct.length} rätt! +${points}`, tone: 'success' };
+    }
+  }
+  if (!won && key && question.type === 'range') {
+    const { low, high } = payload as RangePayload;
+    const value = (key as NumericKey).value;
+    if (low <= value && value <= high) return { text: 'Rätt, men ett smalare spann vann', tone: 'neutral' };
+  }
+  if (!won && question.type === 'closest') return { text: 'Någon var närmare', tone: 'danger' };
+
+  return won ? { text: `Rätt! +${points}`, tone: 'success' } : { text: 'Fel svar', tone: 'danger' };
+}

@@ -26,13 +26,13 @@ One thing to keep in mind: `postgres_changes` checks RLS per subscriber. For a f
 
 ## Question types
 
-| `type` | Name | `config` (example) | Grading |
+| `type` | Name | `config` / key / team payload | Grading |
 |---|---|---|---|
-| `single_choice` | Multiple choice, one correct | `{options: [4 items]}` | auto |
-| `multi_choice` | Multiple choice, 2–3 correct | `{options: [5–8 items], pick: 3}` | auto (points per correct) |
-| `true_false` | 50/50 | `{options: ["True","False"]}` | auto |
-| `range` | Range | `{unit: "minutes"}` | auto: smallest range that contains the answer wins |
-| `closest` | Closest wins | `{unit: "SEK"}` | auto: smallest distance wins |
+| `single_choice` | Multiple choice, one correct | `{options: [3–4]}` / `{correct: 0}` / `{choice: 0}` | auto |
+| `multi_choice` | Multiple choice, 2–3 correct | `{options: [5–8], pick: 2\|3}` / `{correct: [0, 3]}` / `{choices: [0, 3]}` | auto: 2 correct = all or nothing, 3 correct = points per correct pick. Teams must pick exactly `pick` options |
+| `true_false` | 50/50 | `{options: [2]}` / `{correct: 1}` / `{choice: 1}` | auto |
+| `range` | Range | `{unit?}` / `{value: 100}` / `{low, high}` | auto: the narrowest range that contains the answer wins, ties share the points, no hit = 0 |
+| `closest` | Closest wins | `{unit?}` / `{value: 2097}` / `{value}` | auto: smallest distance wins, ties share the points |
 | `free_text` | Free text, 1–4 answers | `{fields: 3}` | manual |
 | `list_timed` | List as many as you can | `{seconds: 60}` | manual (points per accepted item) |
 
@@ -74,8 +74,8 @@ Team phone ──submit_answer RPC (lock in)──► Postgres
 ## MVP stages
 
 1. ✅ **Foundation**: Expo project, Supabase project, schema + RLS migration, auth (QM + anonymous teams), lobby where teams appear live.
-2. **Game loop with one question type** (`single_choice`): QM starts the quiz → "next question" → teams lock in → the host view updates live → reveal → points. *This is the core, so it is built first.*
-3. **Remaining auto-graded types**: `multi_choice`, `true_false`, `range`, `closest`.
+2. ✅ **Game loop with one question type** (`single_choice`): QM starts the quiz → "next question" → teams lock in → the host view updates live → reveal → points. *This is the core, so it is built first.*
+3. ✅ **Remaining auto-graded types**: `multi_choice`, `true_false`, `range`, `closest`.
 4. **Manual types**: `free_text`, `list_timed` + grading view for the QM.
 5. **Quiz editor**: the QM creates and edits quizzes using the templates.
 6. **Polish**: QR code to join, animations on the big screen.

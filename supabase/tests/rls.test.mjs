@@ -255,5 +255,18 @@ await expect('range: nobody hits → 0', pointsAfterReveal, scored({ Ett: 0 }));
 await expect('scoreboard totals', () => rpc(T2, true, 'get_scoreboard', s2.id),
   (r) => JSON.stringify(r?.rows.map((x) => [x.name, x.score])) === JSON.stringify([['Ett', 7], ['Två', 3], ['Tre', 1]]));
 
+// ---------------------------------------------------------------------------
+// Unique team colors
+// ---------------------------------------------------------------------------
+
+const s3 = (await as(QM, false, `insert into game_sessions (quiz_id) values ($1) returning *`, [quiz2.id])).rows[0];
+const joinS3 = (sub, name) => as(sub, sub !== OTHER, `select * from join_session($1, $2)`, [s3.join_code, name]).then((r) => r.rows[0]);
+const a = await joinS3(T1, 'A');
+const b = await joinS3(T2, 'B');
+await expect('teams get different colors', async () => ({ rows: [a.color, b.color] }), (r) => r.rows[0] !== r.rows[1]);
+await as(T1, true, `delete from teams where id = $1`, [a.id]);
+await expect('a leaving team frees its color', () => joinS3(OTHER, 'C').then((c) => ({ rows: [c.color] })), (r) => r.rows[0] === a.color);
+await expect('rejoining keeps the color', () => joinS3(T2, 'B2').then((c) => ({ rows: [c.color] })), (r) => r.rows[0] === b.color);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
