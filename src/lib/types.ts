@@ -49,22 +49,17 @@ export type Question = {
   position: number;
   type: QuestionType;
   prompt: string;
-  config: SingleChoiceConfig | Record<string, unknown>;
+  config: Record<string, unknown>; // see src/lib/question-types.ts
   time_limit_s: number | null;
   points: number;
 };
-
-/** single_choice: config, answer key and team payload (0-based indexes). */
-export type SingleChoiceConfig = { options: string[] };
-export type SingleChoiceKey = { correct: number };
-export type SingleChoicePayload = { choice: number };
 
 export type Answer = {
   id: string;
   session_id: string;
   question_id: string;
   team_id: string;
-  payload: SingleChoicePayload | Record<string, unknown>;
+  payload: Record<string, unknown>; // see src/lib/question-types.ts
   locked_at: string | null;
   points: number | null;
   graded: boolean;

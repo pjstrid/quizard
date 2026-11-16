@@ -50,6 +50,8 @@ export function friendlyError(error: { message: string } | null | undefined): st
     invalid_answer: 'Ogiltigt svar.',
     invalid_options: 'Ange 3–4 svarsalternativ.',
     invalid_answer_key: 'Markera vilket alternativ som är rätt.',
+    invalid_pick: 'Markera 2–3 rätta svar.',
+    invalid_unit: 'Enheten får vara högst 20 tecken.',
     unsupported_question_type: 'Den frågetypen stöds inte än.',
     'Invalid login credentials': 'Fel e-post eller lösenord.',
     'Anonymous sign-ins are disabled':
