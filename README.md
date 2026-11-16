@@ -52,9 +52,17 @@ Or run `npx expo start` and open the app in a simulator or in Expo Go.
 
 ### Try the live flow
 
-1. Sign in as quizmaster in the browser, create a quiz and press **Starta spel**. A join code appears.
+1. Sign in as quizmaster, create a quiz and press **Starta spel**. A join code appears.
 2. Open the app on another device (or a private browser window), choose **Gå med i ett quiz** and enter the code and a team name.
 3. The team appears instantly in the quizmaster's lobby.
+
+### Big screen
+
+1. In the lobby, press **Visa skärmkod** on the quizmaster's phone.
+2. On a TV or laptop browser, open `<your web address>/tv` (or choose **Storskärm** on the start page) and enter the display code.
+3. The TV shows the join code, live lock-ins, results and the scoreboard. The quizmaster controls and grades from the phone.
+
+To show the web address in the native app, set `EXPO_PUBLIC_WEB_URL` in `.env`. During development the TV can use `http://<your-computer's-ip>:8081/tv` on the same network.
 
 ## Checks
 
