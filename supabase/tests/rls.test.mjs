@@ -79,7 +79,7 @@ await expect('host cannot join own session', () => as(QM, false, `select * from 
 await expect('team 1 joins (lowercase code)', () => as(T1, true, `select * from join_session($1, ' Blå ')`, [session.join_code.toLowerCase()]), (r) => r?.rows[0]?.name === 'Blå');
 await expect('team 1 rejoin renames', () => as(T1, true, `select * from join_session($1, 'Blåa laget')`, [session.join_code]), (r) => r?.rows[0]?.name === 'Blåa laget');
 await expect('team 2 duplicate name rejected', () => as(T2, true, `select * from join_session($1, 'Blåa laget')`, [session.join_code]), err(/team_name_taken/));
-await expect('team 2 joins', () => as(T2, true, `select * from join_session($1, 'Röd')`, [session.join_code]), (r) => r?.rows[0]?.color === '#3E63DD');
+await expect('team 2 joins', () => as(T2, true, `select * from join_session($1, 'Röd')`, [session.join_code]), (r) => r?.rows[0]?.color === '#D6409F');
 await expect('team sees session', () => as(T1, true, `select * from game_sessions`), rows(1));
 await expect('team sees quiz title', () => as(T1, true, `select * from quizzes`), rows(1));
 await expect('team sees both teams', () => as(T1, true, `select * from teams`), rows(2));
@@ -461,6 +461,13 @@ await rpc(QM, false, 'finish_quiz', s6.id);
 await expect('no pairing to a finished game', () => tv(`select pair_display($1)`, [displayCode]), err(/session_finished/));
 await expect('no display code for a finished game', () => rpc(QM, false, 'get_display_code', s6.id), err(/session_finished/));
 await expect('other sessions stay hidden', () => tv(`select * from game_sessions where id = $1`, [otherSession.id]), rows(0));
+
+// ---------------------------------------------------------------------------
+// Stage 7 (#12): team colors avoid the status colors
+// ---------------------------------------------------------------------------
+
+await expect('team palette has no red, green or yellow', () => as(QM, false, `select distinct color from teams`),
+  (r) => r?.rows.length > 0 && !r.rows.some((x) => ['#E5484D', '#30A46C', '#FFC53D', '#2ECC71', '#E74C3C', '#FFD200'].includes(x.color)));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

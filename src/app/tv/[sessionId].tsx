@@ -44,11 +44,11 @@ export default function TvScreen() {
   return (
     <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={styles.root}>
       <View style={styles.header}>
-        <ThemedText style={[styles.logo, { color: theme.primary }]}>QUIZARD</ThemedText>
+        <ThemedText display style={[styles.logo, { color: theme.primary }]}>QUIZARD</ThemedText>
         {title && <ThemedText style={styles.title}>{title}</ThemedText>}
         <View style={{ flex: 1 }} />
         {session.status === 'playing' && (
-          <ThemedText themeColor="textSecondary" style={styles.headerCode}>
+          <ThemedText display themeColor="textSecondary" style={styles.headerCode}>
             Gå med: {session.join_code}
           </ThemedText>
         )}
@@ -96,7 +96,7 @@ function Lobby({ session, teams, wide }: { session: GameSession; teams: Team[]; 
           <ThemedText style={styles.lead}>
             Gå med{joinAddress ? ` på ${joinAddress}` : ' i QUIZARD-appen'} med koden
           </ThemedText>
-          <ThemedText style={[styles.joinCode, { color: theme.primary }]}>{session.join_code}</ThemedText>
+          <ThemedText display style={[styles.joinCode, { color: theme.primary }]}>{session.join_code}</ThemedText>
           <ThemedText themeColor="textSecondary" style={styles.lead}>
             Väntar på att quizmastern startar …
           </ThemedText>
@@ -129,7 +129,7 @@ function Playing({ session, teams, wide }: { session: GameSession; teams: Team[]
       wide={wide}
       left={
         <>
-          <ThemedText themeColor="textSecondary" style={styles.counter}>
+          <ThemedText display themeColor="textSecondary" style={styles.counter}>
             FRÅGA {session.question_index} AV {session.question_count}
           </ThemedText>
           <ThemedText style={styles.prompt}>{question.prompt}</ThemedText>
@@ -143,7 +143,7 @@ function Playing({ session, teams, wide }: { session: GameSession; teams: Team[]
       right={
         <>
           <Card>
-            <ThemedText type="smallBold" themeColor="textSecondary">
+            <ThemedText type="label">
               {revealed ? 'RESULTAT' : `LÅSTA SVAR ${lockedCount} / ${teams.length}`}
             </ThemedText>
             {teams.map((team) => (
@@ -166,13 +166,17 @@ function Playing({ session, teams, wide }: { session: GameSession; teams: Team[]
 }
 
 function Finished({ session }: { session: GameSession }) {
+  const theme = useTheme();
   const scores = useScoreboard(session.id, `${session.status}-${session.scores_version}`);
-  const winners = scores.filter((s) => scores[0] && s.score === scores[0].score);
+  // Nobody wins with zero points.
+  const winners = scores.filter((s) => s.score > 0 && s.score === scores[0].score);
   return (
     <View style={{ gap: Spacing.four, alignItems: 'center' }}>
-      <ThemedText style={styles.prompt}>Quizet är slut!</ThemedText>
+      <ThemedText display style={styles.prompt}>Quizet är slut!</ThemedText>
       {winners.length > 0 && (
-        <ThemedText style={styles.winner}>🏆 {winners.map((w) => w.name).join(' & ')}</ThemedText>
+        <ThemedText display style={[styles.winner, { color: theme.primary }]}>
+          🏆 {winners.map((w) => w.name).join(' & ')}
+        </ThemedText>
       )}
       <View style={{ width: '100%', maxWidth: 720 }}>
         <Scoreboard rows={scores} title="SLUTRESULTAT" />

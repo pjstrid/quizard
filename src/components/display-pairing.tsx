@@ -54,7 +54,7 @@ export function DisplayPairing({ sessionId, compact }: { sessionId: string; comp
   const address = tvAddress();
   return (
     <Card>
-      <ThemedText type="smallBold" themeColor="textSecondary">
+      <ThemedText type="label">
         STORSKÄRM
       </ThemedText>
       {status && <ThemedText style={{ color: theme.success, fontWeight: 700 }}>{status}</ThemedText>}
@@ -64,7 +64,7 @@ export function DisplayPairing({ sessionId, compact }: { sessionId: string; comp
             Öppna {address ? <ThemedText style={{ fontWeight: 700 }}>{address}</ThemedText> : 'QUIZARD i webbläsaren'} på
             tv:n eller datorn och skriv in koden:
           </ThemedText>
-          <ThemedText style={[styles.code, { color: theme.primary }]} selectable>
+          <ThemedText display style={[styles.code, { color: theme.primary }]} selectable>
             {code}
           </ThemedText>
           <ThemedText themeColor="textSecondary">

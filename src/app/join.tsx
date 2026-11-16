@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
+import { FontFamily } from '@/constants/theme';
 import { Button, ErrorText, Screen, TextField } from '@/components/ui';
 import { friendlyError, supabase } from '@/lib/supabase';
 import type { Team } from '@/lib/types';
@@ -62,7 +63,7 @@ export default function JoinScreen() {
         autoCapitalize="characters"
         autoCorrect={false}
         maxLength={6}
-        style={{ fontSize: 28, letterSpacing: 6, fontWeight: 700 }}
+        style={{ fontSize: 26, letterSpacing: 6, fontFamily: FontFamily.display[800] }}
       />
       <TextField
         label="Lagnamn"

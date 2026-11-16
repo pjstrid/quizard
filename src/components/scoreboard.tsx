@@ -1,5 +1,6 @@
 import { View } from 'react-native';
 
+import { TeamMarker } from '@/components/team-marker';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
@@ -18,7 +19,7 @@ export function Scoreboard({ rows, title = 'STÄLLNING', highlightTeamId }: Prop
 
   return (
     <Card>
-      <ThemedText type="smallBold" themeColor="textSecondary">
+      <ThemedText type="label">
         {title}
       </ThemedText>
       {rows.map((row, i) => {
@@ -36,12 +37,22 @@ export function Scoreboard({ rows, title = 'STÄLLNING', highlightTeamId }: Prop
               borderTopWidth: i === 0 ? 0 : 1,
               borderColor: theme.border,
             }}>
-            <ThemedText style={{ width: 28, fontWeight: 800 }} themeColor="textSecondary">
-              {place}.
+            <ThemedText display style={{ width: 32, fontWeight: 700 }} themeColor="textSecondary">
+              {String(place).padStart(2, '0')}
             </ThemedText>
-            <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: row.color }} />
-            <ThemedText style={{ flex: 1, fontWeight: mine ? 800 : 500 }}>{row.name}</ThemedText>
-            <ThemedText style={{ fontWeight: 800, fontSize: 20 }}>{row.score}</ThemedText>
+            <TeamMarker color={row.color} />
+            <ThemedText style={{ flex: 1, fontWeight: mine ? 700 : 500 }}>{row.name}</ThemedText>
+            {/* The leader's score is the one yellow number on the board. */}
+            <ThemedText
+              display
+              style={{
+                fontWeight: 900,
+                fontSize: 20,
+                fontVariant: ['tabular-nums'],
+                color: place === 1 && row.score > 0 ? theme.primary : theme.text,
+              }}>
+              {row.score}
+            </ThemedText>
           </View>
         );
       })}
