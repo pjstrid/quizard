@@ -1,4 +1,4 @@
-import type { PropsWithChildren, ReactNode } from 'react';
+import { useEffect, useRef, useState, type PropsWithChildren, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -34,15 +34,19 @@ type ButtonProps = {
   variant?: 'primary' | 'secondary' | 'danger';
   loading?: boolean;
   disabled?: boolean;
+  /** Screen reader label when the title is a symbol (e.g. ↑). */
+  accessibilityLabel?: string;
 };
 
-export function Button({ title, onPress, variant = 'primary', loading, disabled }: ButtonProps) {
+export function Button({ title, onPress, variant = 'primary', loading, disabled, accessibilityLabel }: ButtonProps) {
   const theme = useTheme();
   const isPrimary = variant === 'primary';
   const color = variant === 'danger' ? theme.danger : isPrimary ? theme.onPrimary : theme.text;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityState={{ disabled: !!(disabled || loading), busy: !!loading }}
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => [
@@ -59,6 +63,45 @@ export function Button({ title, onPress, variant = 'primary', loading, disabled 
         <ThemedText style={{ color, fontWeight: 700 }}>{title}</ThemedText>
       )}
     </Pressable>
+  );
+}
+
+/**
+ * A button that asks for a second press before running a destructive action.
+ * Works the same on web and native (no system dialog).
+ */
+export function ConfirmButton({
+  title,
+  confirmTitle = 'Säker? Tryck igen',
+  onConfirm,
+  loading,
+  disabled,
+}: {
+  title: string;
+  confirmTitle?: string;
+  onConfirm: () => void;
+  loading?: boolean;
+  disabled?: boolean;
+}) {
+  const [armed, setArmed] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
+
+  function press() {
+    if (armed) {
+      setArmed(false);
+      onConfirm();
+      return;
+    }
+    setArmed(true);
+    timer.current = setTimeout(() => setArmed(false), 4000);
+  }
+
+  return (
+    <Button title={armed ? confirmTitle : title} variant="danger" onPress={press} loading={loading} disabled={disabled} />
   );
 }
 

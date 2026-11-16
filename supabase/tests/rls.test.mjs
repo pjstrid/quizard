@@ -63,11 +63,12 @@ const quiz = (await as(QM, false, `insert into quizzes (title) values ('Kompisqu
 const q1 = await createQuestion('Huvudstad i Norge?', ['Oslo', 'Bergen', 'Stockholm', 'Köpenhamn'], 0);
 const qDeleted = await createQuestion('Tas bort', ['A', 'B', 'C'], 1);
 const q3 = await createQuestion('Antal ben på en spindel?', ['6', '8', '10'], 1, 10);
-await as(QM, false, `delete from questions where id = $1`, [qDeleted.id]);
+await as(QM, false, `select delete_question($1)`, [qDeleted.id]);
 const session = (await as(QM, false, `insert into game_sessions (quiz_id) values ($1) returning *`, [quiz.id])).rows[0];
 console.log('join code:', session.join_code);
 
-await expect('positions are appended (1, 3 after delete)', async () => ({ rows: [q1.position, q3.position] }), (r) => r.rows[0] === 1 && r.rows[1] === 3);
+await expect('positions are renumbered after delete (1, 2)', () => as(QM, false, `select position from questions where quiz_id = $1 order by position`, [quiz.id]),
+  (r) => JSON.stringify(r?.rows.map((x) => x.position)) === '[1,2]');
 await expect('anonymous user cannot create quiz', () => as(T1, true, `insert into quizzes (title) values ('x')`), err(/row-level security/));
 await expect('other user cannot see QM quiz', () => as(OTHER, false, `select * from quizzes`), rows(0));
 await expect('other user cannot start session on QM quiz', () => as(OTHER, false, `insert into game_sessions (quiz_id) values ($1)`, [quiz.id]), err(/row-level security/));
@@ -140,8 +141,8 @@ await expect('team sees scoreboard', () => rpc(T2, true, 'get_scoreboard', sessi
   (r) => r?.rows.length === 3 && r.rows[0].name === 'Blåa laget' && r.rows[0].score === 1 && r.rows[1].score === 0);
 await expect('outsider cannot see scoreboard', () => rpc(OUT, false, 'get_scoreboard', session.id), err(/not_in_session/));
 
-await expect('next question skips the deleted position', () => rpc(QM, false, 'next_question', session.id),
-  (r) => r?.rows[0]?.current_position === 3 && r.rows[0].question_index === 2 && r.rows[0].phase === 'question');
+await expect('next question moves to question 2', () => rpc(QM, false, 'next_question', session.id),
+  (r) => r?.rows[0]?.current_position === 2 && r.rows[0].question_index === 2 && r.rows[0].phase === 'question');
 await expect('q3: team sees 2 questions, 1 key', async () => {
   const qs = await as(T1, true, `select * from questions`);
   const ks = await as(T1, true, `select * from question_keys`);
@@ -358,6 +359,54 @@ await rpc(QM, false, 'close_answers', s4.id);
 await expect('grade_answer is only for manual types', async () => grade(QM, false, await answerId('Ett'), [true]), err(/not_manual_question/));
 await expect('reveal from locked scores auto types', async () => { await rpc(QM, false, 'reveal_question', s4.id); return state4(); },
   same({ Ett: [1, null] }));
+
+// ---------------------------------------------------------------------------
+// Stage 5 (#4): quiz editor
+// ---------------------------------------------------------------------------
+
+const quiz5 = (await as(QM, false, `insert into quizzes (title) values ('Editor') returning *`)).rows[0];
+const add5 = (prompt) =>
+  as(QM, false, `select * from create_question($1, 'single_choice', $2, $3, $4)`, [
+    quiz5.id, prompt, JSON.stringify({ options: ['A', 'B', 'C'] }), JSON.stringify({ correct: 0 }),
+  ]).then((r) => r.rows[0]);
+const e1 = await add5('Ett');
+const e2 = await add5('Två');
+const e3 = await add5('Tre');
+const order5 = () => as(QM, false, `select prompt from questions where quiz_id = $1 order by position`, [quiz5.id]).then((r) => r.rows.map((x) => x.prompt).join(','));
+const update5 = (sub, anon, id, type, prompt, config, answer, timeLimit = null, points = 1) =>
+  as(sub, anon, `select * from update_question($1, $2, $3, $4, $5, $6, $7)`, [id, type, prompt, JSON.stringify(config), JSON.stringify(answer), timeLimit, points]);
+
+await expect('direct insert into questions is no longer allowed', () => as(QM, false, `insert into questions (quiz_id, position, type, prompt) values ($1, 9, 'closest', 'x')`, [quiz5.id]), err(/permission denied/));
+await expect('direct update of questions is no longer allowed', () => as(QM, false, `update questions set prompt = 'x' where id = $1`, [e1.id]), err(/permission denied/));
+await expect('direct update of keys is no longer allowed', () => as(QM, false, `update question_keys set answer = '{}' where question_id = $1`, [e1.id]), err(/permission denied/));
+await expect('move down', async () => { await as(QM, false, `select move_question($1, 1)`, [e1.id]); return { rows: [await order5()] }; }, (r) => r.rows[0] === 'Två,Ett,Tre');
+await expect('move up', async () => { await as(QM, false, `select move_question($1, -1)`, [e3.id]); return { rows: [await order5()] }; }, (r) => r.rows[0] === 'Två,Tre,Ett');
+await expect('moving the first question up is a no-op', async () => { await as(QM, false, `select move_question($1, -1)`, [e2.id]); return { rows: [await order5()] }; }, (r) => r.rows[0] === 'Två,Tre,Ett');
+await expect('other user cannot move', () => as(OTHER, false, `select move_question($1, 1)`, [e2.id]), err(/not_quiz_owner/));
+await expect('update changes type, prompt, key, time and points', () => update5(QM, false, e2.id, 'closest', 'Hur högt?', { unit: 'm' }, { value: 2097 }, 30, 3),
+  (r) => r?.rows[0]?.type === 'closest' && r.rows[0].prompt === 'Hur högt?' && r.rows[0].points === 3 && r.rows[0].time_limit_s === 30);
+await expect('updated key is stored', () => as(QM, false, `select answer from question_keys where question_id = $1`, [e2.id]), (r) => r?.rows[0]?.answer?.value === 2097);
+await expect('update is validated', () => update5(QM, false, e2.id, 'single_choice', 'x', { options: ['A'] }, { correct: 0 }), err(/invalid_options/));
+await expect('list needs a time limit on update too', () => update5(QM, false, e2.id, 'list_timed', 'x', {}, { answers: [] }), err(/time_limit_required/));
+await expect('other user cannot update', () => update5(OTHER, false, e2.id, 'closest', 'x', {}, { value: 1 }), err(/not_quiz_owner/));
+await expect('team cannot update', () => update5(T1, true, e2.id, 'closest', 'x', {}, { value: 1 }), err(/not_quiz_owner/));
+await expect('owner can rename quiz', () => as(QM, false, `update quizzes set title = 'Nytt namn' where id = $1 returning title`, [quiz5.id]), (r) => r?.rows[0]?.title === 'Nytt namn');
+await expect('other user cannot rename quiz', () => as(OTHER, false, `update quizzes set title = 'x' where id = $1 returning *`, [quiz5.id]), rows(0));
+
+// No edits while a game with the quiz is running
+const s5 = (await as(QM, false, `insert into game_sessions (quiz_id) values ($1) returning *`, [quiz5.id])).rows[0];
+await expect('editing is allowed while in the lobby', () => update5(QM, false, e3.id, 'single_choice', 'Tre!', { options: ['A', 'B', 'C'] }, { correct: 1 }), rows(1));
+await rpc(QM, false, 'start_quiz', s5.id);
+await expect('no update during a game', () => update5(QM, false, e3.id, 'single_choice', 'x', { options: ['A', 'B', 'C'] }, { correct: 1 }), err(/quiz_in_play/));
+await expect('no move during a game', () => as(QM, false, `select move_question($1, 1)`, [e3.id]), err(/quiz_in_play/));
+await expect('no delete during a game', () => as(QM, false, `select delete_question($1)`, [e3.id]), err(/quiz_in_play/));
+await expect('no new question during a game', () => add5('Fyra'), err(/quiz_in_play/));
+await rpc(QM, false, 'finish_quiz', s5.id);
+await expect('delete renumbers after the game', async () => {
+  await as(QM, false, `select delete_question($1)`, [e2.id]);
+  return as(QM, false, `select prompt, position from questions where quiz_id = $1 order by position`, [quiz5.id]);
+}, (r) => JSON.stringify(r?.rows) === JSON.stringify([{ prompt: 'Tre!', position: 1 }, { prompt: 'Ett', position: 2 }]));
+await expect('delete removes the key too', () => as(QM, false, `select * from question_keys where question_id = $1`, [e2.id]), rows(0));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Button, Card, ErrorText, Screen, TextField } from '@/components/ui';
+import { Button, Card, ConfirmButton, ErrorText, Screen, TextField } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { friendlyError, supabase } from '@/lib/supabase';
 import { startSession } from '@/lib/start-session';
@@ -92,7 +92,7 @@ export default function HostHomeScreen() {
               variant="secondary"
               onPress={() => router.push({ pathname: '/host/quiz/[id]', params: { id: quiz.id } })}
             />
-            <Button title="Ta bort" variant="danger" onPress={() => deleteQuiz(quiz)} />
+            <ConfirmButton title="Ta bort" onConfirm={() => deleteQuiz(quiz)} />
           </View>
         </Card>
       ))}

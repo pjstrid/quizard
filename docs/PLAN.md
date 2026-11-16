@@ -77,7 +77,7 @@ Team phone ──submit_answer RPC (lock in)──► Postgres
 2. ✅ **Game loop with one question type** (`single_choice`): QM starts the quiz → "next question" → teams lock in → the host view updates live → reveal → points. *This is the core, so it is built first.*
 3. ✅ **Remaining auto-graded types**: `multi_choice`, `true_false`, `range`, `closest`.
 4. ✅ **Manual types**: `free_text`, `list_timed` + grading view for the QM.
-5. **Quiz editor**: the QM creates and edits quizzes using the templates.
+5. ✅ **Quiz editor**: the QM creates and edits quizzes using the templates.
 6. **Polish**: QR code to join, animations on the big screen.
 
 After MVP: English UI (i18n), Chromecast/AirPlay, images in questions (Supabase Storage), sharing quizzes, public quizzes.
