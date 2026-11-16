@@ -1,28 +1,28 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { Countdown, useSecondsLeft } from '@/components/countdown';
+import { DisplayPairing } from '@/components/display-pairing';
 import { GradingPanel } from '@/components/grading-panel';
 import { QuestionBody } from '@/components/question-body';
 import { Scoreboard } from '@/components/scoreboard';
 import { TeamList } from '@/components/team-list';
+import { TeamStatus } from '@/components/team-status';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ErrorText, Loading, Screen } from '@/components/ui';
-import { Spacing } from '@/constants/theme';
 import { useAnswers, useCurrentQuestion, useScoreboard } from '@/hooks/use-game';
 import { useSessionLive } from '@/hooks/use-session-live';
 import { useTheme } from '@/hooks/use-theme';
-import { describeAnswer, isManualType } from '@/lib/question-types';
+import { isManualType } from '@/lib/question-types';
 import { friendlyError, supabase } from '@/lib/supabase';
-import type { Answer, GameSession, Question, Team } from '@/lib/types';
+import type { GameSession, Team } from '@/lib/types';
 
 type HostRpc = 'start_quiz' | 'close_answers' | 'reveal_question' | 'next_question' | 'finish_quiz';
 
 /**
- * The quizmaster's game view: lobby → questions → reveal → final scoreboard.
- * Doubles as the big-screen view for now (#5 adds a dedicated one), so it never
- * shows the correct answer before the reveal.
+ * The quizmaster's game view (the "remote control"): lobby → questions →
+ * grading → reveal → final scoreboard. The public view for the TV is /tv/[id].
  */
 export default function HostSessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -60,6 +60,7 @@ export default function HostSessionScreen() {
         <>
           <JoinCode code={session.join_code} />
           <TeamList teams={teams} large />
+          <DisplayPairing sessionId={session.id} />
           <ErrorText>{error}</ErrorText>
           <Button
             title="Starta quiz"
@@ -117,18 +118,28 @@ function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
   const grading = manual && (session.phase === 'locked' || revealed);
   const isLast = session.question_index === session.question_count;
   const lockedCount = answers.filter((a) => a.locked_at).length;
+  // The key stays hidden by default in case this phone is mirrored to a TV.
+  const [peek, setPeek] = useState(false);
 
   if (!question) return <Loading />;
 
   return (
     <>
+      <DisplayPairing sessionId={session.id} compact />
       <ThemedText type="smallBold" themeColor="textSecondary">
         FRÅGA {session.question_index} AV {session.question_count}
       </ThemedText>
       <ThemedText style={styles.prompt}>{question.prompt}</ThemedText>
       {session.phase === 'question' && <Countdown secondsLeft={secondsLeft} />}
 
-      <QuestionBody large question={question} answerKey={revealed ? answerKey : null} />
+      <QuestionBody large question={question} answerKey={revealed || peek ? answerKey : null} />
+      {!revealed && (
+        <Button
+          title={peek ? 'Dölj facit' : 'Visa facit (bara för dig)'}
+          variant="secondary"
+          onPress={() => setPeek((p) => !p)}
+        />
+      )}
 
       {grading ? (
         <GradingPanel
@@ -175,44 +186,6 @@ function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
   );
 }
 
-function TeamStatus({
-  team,
-  answer,
-  revealed,
-  timeUp,
-  question,
-}: {
-  team: Team;
-  answer: Answer | undefined;
-  revealed: boolean;
-  timeUp: boolean;
-  question: Question;
-}) {
-  const theme = useTheme();
-
-  let status: string;
-  let color: string = theme.textSecondary;
-  if (!revealed) {
-    // Never show the answer itself before reveal – this screen may be on a TV.
-    status = answer?.locked_at ? '✓ Låst' : timeUp ? 'Hann inte' : 'Tänker …';
-    if (answer?.locked_at) color = theme.success;
-  } else if (!answer) {
-    status = 'Inget svar';
-  } else {
-    const right = (answer.points ?? 0) > 0;
-    status = `${describeAnswer(question, answer.payload)}  ${right ? `✓ +${answer.points}` : '✗'}`;
-    color = right ? theme.success : theme.danger;
-  }
-
-  return (
-    <View style={styles.teamRow}>
-      <View style={[styles.dot, { backgroundColor: team.color }]} />
-      <ThemedText style={{ flex: 1, fontSize: 20, fontWeight: 600 }}>{team.name}</ThemedText>
-      <ThemedText style={{ color, fontWeight: 700 }}>{status}</ThemedText>
-    </View>
-  );
-}
-
 function FinishedView({ session }: { session: GameSession }) {
   const scores = useScoreboard(session.id, session.status);
   const winners = scores.filter((s) => scores[0] && s.score === scores[0].score);
@@ -237,6 +210,4 @@ const styles = StyleSheet.create({
   center: { textAlign: 'center' },
   code: { fontSize: 64, lineHeight: 76, fontWeight: 800, letterSpacing: 10, textAlign: 'center' },
   prompt: { fontSize: 28, lineHeight: 36, fontWeight: 700 },
-  teamRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.one },
-  dot: { width: 18, height: 18, borderRadius: 9 },
 });

@@ -19,6 +19,8 @@ export default function RootLayout() {
             <Stack.Screen name="login" options={{ title: 'Quizmaster' }} />
             <Stack.Screen name="play/[sessionId]" options={{ title: 'QUIZARD', headerBackVisible: false }} />
             <Stack.Screen name="host" options={{ headerShown: false }} />
+            <Stack.Screen name="tv/index" options={{ title: 'Storskärm' }} />
+            <Stack.Screen name="tv/[sessionId]" options={{ headerShown: false }} />
           </Stack>
         </AuthProvider>
       ) : (
