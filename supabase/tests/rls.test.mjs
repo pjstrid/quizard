@@ -40,7 +40,7 @@ async function expect(name, fn, check) {
     const r = await fn();
     const ok = check(r, null);
     ok ? pass++ : fail++;
-    console.log(ok ? 'PASS' : 'FAIL', name, ok ? '' : JSON.stringify(r.rows));
+    console.log(ok ? 'PASS' : 'FAIL', name, ok ? '' : JSON.stringify(r?.rows ?? r));
   } catch (e) {
     const ok = check(null, e);
     ok ? pass++ : fail++;
@@ -100,7 +100,7 @@ await expect('single_choice needs 3–4 options', () => cq(QM, false, 'single_ch
 await expect('single_choice rejects empty option', () => cq(QM, false, 'single_choice', ['A', ' ', 'C'], 0), err(/invalid_options/));
 await expect('single_choice key must be a valid index', () => cq(QM, false, 'single_choice', ['A', 'B', 'C'], 3), err(/invalid_answer_key/));
 await expect('single_choice key must be a number', () => cq(QM, false, 'single_choice', ['A', 'B', 'C'], '1'), err(/invalid_answer_key/));
-await expect('manual types are not supported yet', () => cq(QM, false, 'free_text', [], 0), err(/unsupported_question_type/));
+await expect('free_text without fields is rejected', () => cq(QM, false, 'free_text', [], 0), err(/invalid_fields/));
 await expect('team cannot create questions', () => cq(T1, true, 'single_choice', ['A', 'B', 'C'], 0), err(/not_quiz_owner/));
 
 // ---------------------------------------------------------------------------
@@ -267,6 +267,97 @@ await expect('teams get different colors', async () => ({ rows: [a.color, b.colo
 await as(T1, true, `delete from teams where id = $1`, [a.id]);
 await expect('a leaving team frees its color', () => joinS3(OTHER, 'C').then((c) => ({ rows: [c.color] })), (r) => r.rows[0] === a.color);
 await expect('rejoining keeps the color', () => joinS3(T2, 'B2').then((c) => ({ rows: [c.color] })), (r) => r.rows[0] === b.color);
+
+// ---------------------------------------------------------------------------
+// Stage 4 (#3): manual types – validation
+// ---------------------------------------------------------------------------
+
+const quiz3 = (await as(QM, false, `insert into quizzes (title) values ('Manuell') returning *`)).rows[0];
+const create3 = (type, config, answer, timeLimit = null) =>
+  as(QM, false, `select * from create_question($1, $2, 'Fråga', $3, $4, $5)`, [quiz3.id, type, JSON.stringify(config), JSON.stringify(answer), timeLimit]);
+
+await expect('free_text: max 4 fields', () => create3('free_text', { fields: 5 }, { answers: [] }), err(/invalid_fields/));
+await expect('free_text: at least 1 field', () => create3('free_text', { fields: 0 }, { answers: [] }), err(/invalid_fields/));
+await expect('free_text: key answers must be strings', () => create3('free_text', { fields: 1 }, { answers: [1] }), err(/invalid_answer_key/));
+await expect('list_timed: needs a time limit', () => create3('list_timed', {}, { answers: [] }), err(/time_limit_required/));
+await expect('create free_text (2 fields)', () => create3('free_text', { fields: 2 }, { answers: ['Oslo', 'Bergen'] }), rows(1));
+await expect('create list_timed', () => create3('list_timed', {}, { answers: ['Skåne', 'Uppland', 'Dalarna'] }, 60), rows(1));
+await expect('create single_choice', () => create3('single_choice', { options: ['A', 'B', 'C'] }, { correct: 0 }), rows(1));
+
+// ---------------------------------------------------------------------------
+// Stage 4 (#3): manual types – grading flow
+// ---------------------------------------------------------------------------
+
+const s4 = (await as(QM, false, `insert into game_sessions (quiz_id) values ($1) returning *`, [quiz3.id])).rows[0];
+await as(T1, true, `select * from join_session($1, 'Ett')`, [s4.join_code]);
+await as(T2, true, `select * from join_session($1, 'Två')`, [s4.join_code]);
+await as(OTHER, false, `select * from join_session($1, 'Tre')`, [s4.join_code]);
+await rpc(QM, false, 'start_quiz', s4.id);
+
+const answer4 = (sub, payload) => as(sub, sub !== OTHER, `select * from submit_answer($1, $2)`, [s4.id, JSON.stringify(payload)]);
+const answerId = async (teamName) =>
+  (await as(QM, false, `select a.id from answers a join teams t on t.id = a.team_id join questions q on q.id = a.question_id
+     join game_sessions gs on gs.id = a.session_id where a.session_id = $1 and t.name = $2 and q.position = gs.current_position`, [s4.id, teamName])).rows[0].id;
+const grade = (sub, anon, id, grading) => as(sub, anon, `select * from grade_answer($1, $2)`, [id, JSON.stringify(grading)]);
+const state4 = async () => {
+  const r = await as(QM, false, `select t.name, a.points, a.grading from answers a join teams t on t.id = a.team_id
+     join questions q on q.id = a.question_id join game_sessions gs on gs.id = a.session_id
+     where a.session_id = $1 and q.position = gs.current_position order by t.name`, [s4.id]);
+  return Object.fromEntries(r.rows.map((x) => [x.name, [x.points, x.grading]]));
+};
+const score4 = async (sub) => {
+  const r = await as(sub, sub !== OTHER && sub !== QM, `select * from get_scoreboard($1)`, [s4.id]);
+  return Object.fromEntries(r.rows.map((x) => [x.name, x.score]));
+};
+// Compare objects regardless of key order.
+const sorted = (o) => JSON.stringify(Object.keys(o ?? {}).sort().map((k) => [k, o[k]]));
+const same = (expected) => (r) => sorted(r) === sorted(expected);
+
+// Q1 free_text, 2 fields, key Oslo/Bergen
+await expect('free_text: wrong number of fields rejected', () => answer4(OTHER, { answers: ['Oslo'] }), err(/invalid_answer/));
+await answer4(T1, { answers: ['oslo ', 'Stockholm'] });
+await answer4(T2, { answers: ['Bergen', 'bergen'] });
+await answer4(OTHER, { answers: ['', ''] });
+await expect('team cannot close answers', () => rpc(T1, true, 'close_answers', s4.id), err(/not_session_host/));
+await expect('host closes answers', () => rpc(QM, false, 'close_answers', s4.id), (r) => r?.rows[0]?.phase === 'locked');
+await expect('cannot answer after close', () => answer4(T1, { answers: ['a', 'b'] }), err(/answers_closed/));
+await expect('close suggests grading from the key (case-insensitive, each key once)', state4,
+  same({ Ett: [1, [true, false]], Tre: [0, [false, false]], 'Två': [1, [true, false]] }));
+await expect('suggested points are hidden from the scoreboard before reveal', () => score4(T1), same({ Ett: 0, 'Två': 0, Tre: 0 }));
+const ettId = await answerId('Ett');
+await expect('team cannot grade', () => grade(T1, true, ettId, [true, true]), err(/not_session_host/));
+await expect('grading must match the number of entries', () => grade(QM, false, ettId, [true]), err(/invalid_grading/));
+await expect('grading must be booleans', () => grade(QM, false, ettId, [1, 0]), err(/invalid_grading/));
+await expect('host accepts a misspelling', () => grade(QM, false, ettId, [true, true]), (r) => r?.rows[0]?.points === 2 && r.rows[0].graded === true);
+await rpc(QM, false, 'reveal_question', s4.id);
+await expect('reveal keeps the host grading', state4, same({ Ett: [2, [true, true]], Tre: [0, [false, false]], 'Två': [1, [true, false]] }));
+await expect('scoreboard after reveal', () => score4(T2), same({ Ett: 2, 'Två': 1, Tre: 0 }));
+await expect('host can correct after reveal', async () => grade(QM, false, await answerId('Två'), [true, true]), (r) => r?.rows[0]?.points === 2);
+await expect('scoreboard reflects the correction', () => score4(QM), same({ Ett: 2, 'Två': 2, Tre: 0 }));
+await expect('grading bumps scores_version so teams refetch', () => as(T1, true, `select scores_version from game_sessions where id = $1`, [s4.id]),
+  (r) => r?.rows[0]?.scores_version === 2); // two successful grade_answer calls so far
+await rpc(QM, false, 'next_question', s4.id);
+
+// Q2 list_timed, key Skåne/Uppland/Dalarna, revealed without a grading step
+await expect('list: max 100 items', () => answer4(T2, { items: Array.from({ length: 101 }, (_, i) => `x${i}`) }), err(/invalid_answer/));
+await expect('list: empty items rejected', () => answer4(T2, { items: ['Skåne', ' '] }), err(/invalid_answer/));
+await answer4(T1, { items: ['Skåne', 'skåne', 'Gotland', 'Uppland'] });
+await answer4(T2, { items: [] });
+await rpc(QM, false, 'reveal_question', s4.id);
+await expect('reveal from question phase applies the suggestion, duplicates count once', state4,
+  same({ Ett: [2, [true, false, false, true]], 'Två': [0, []] }));
+await expect('grading is closed for old questions', async () => {
+  const oldId = ettId;
+  await rpc(QM, false, 'next_question', s4.id);
+  return grade(QM, false, oldId, [false, false]);
+}, err(/invalid_state/));
+
+// Q3 single_choice: close_answers works for auto types, grade_answer does not
+await answer4(T1, { choice: 0 });
+await rpc(QM, false, 'close_answers', s4.id);
+await expect('grade_answer is only for manual types', async () => grade(QM, false, await answerId('Ett'), [true]), err(/not_manual_question/));
+await expect('reveal from locked scores auto types', async () => { await rpc(QM, false, 'reveal_question', s4.id); return state4(); },
+  same({ Ett: [1, null] }));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

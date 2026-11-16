@@ -31,6 +31,8 @@ export type GameSession = {
   phase_started_at: string | null;
   question_index: number | null;
   question_count: number | null;
+  /** Bumped when grading changes points, so clients refetch the scoreboard. */
+  scores_version: number;
   created_at: string;
 };
 
@@ -63,6 +65,8 @@ export type Answer = {
   locked_at: string | null;
   points: number | null;
   graded: boolean;
+  /** Manual types: one accepted/rejected flag per field or list item. */
+  grading: boolean[] | null;
 };
 
 export type ScoreRow = {

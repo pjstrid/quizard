@@ -73,7 +73,10 @@ function TeamBadge({ team }: { team: Team }) {
 
 function PlayingView({ session, team, teamCount }: { session: GameSession; team: Team; teamCount: number }) {
   const { question, answerKey } = useCurrentQuestion(session);
-  const scores = useScoreboard(session.id, `${session.current_position}-${session.phase}-${teamCount}`);
+  const scores = useScoreboard(
+    session.id,
+    `${session.current_position}-${session.phase}-${teamCount}-${session.scores_version}`,
+  );
 
   if (!question) return <Loading />;
 
@@ -107,7 +110,8 @@ function AnswerArea({
   const revealed = session.phase === 'reveal';
   const secondsLeft = useSecondsLeft(revealed ? null : session.phase_started_at, question.time_limit_s);
   const timeUp = secondsLeft === 0;
-  const canAnswer = !revealed && !myAnswer && !timeUp;
+  // A list stays mounted when time is up so it can auto-submit what the team wrote.
+  const canAnswer = !revealed && !myAnswer && (!timeUp || question.type === 'list_timed');
 
   async function lockIn(payload: AnswerPayload) {
     setError(null);
@@ -123,23 +127,29 @@ function AnswerArea({
 
       {canAnswer ? (
         <>
-          <AnswerInput question={question} busy={busy} onSubmit={lockIn} />
+          <AnswerInput question={question} busy={busy} onSubmit={lockIn} startedAt={session.phase_started_at} />
           <ErrorText>{error}</ErrorText>
         </>
       ) : (
-        <QuestionBody large question={question} payload={myAnswer?.payload} answerKey={revealed ? answerKey : null} />
+        <QuestionBody
+          large
+          question={question}
+          payload={myAnswer?.payload}
+          answerKey={revealed ? answerKey : null}
+          grading={revealed ? myAnswer?.grading : null}
+        />
       )}
 
       {!revealed && myAnswer && (
         <Card>
           <ThemedText style={[styles.center, { color: theme.success, fontWeight: 800 }]}>✓ Svaret är låst!</ThemedText>
           <ThemedText themeColor="textSecondary" style={styles.center}>
-            Väntar på att quizmastern visar svaret …
+            {session.phase === 'locked' ? 'Quizmastern rättar …' : 'Väntar på att quizmastern visar svaret …'}
           </ThemedText>
         </Card>
       )}
 
-      {!revealed && !myAnswer && timeUp && (
+      {!revealed && !myAnswer && timeUp && question.type !== 'list_timed' && (
         <ThemedText themeColor="textSecondary" style={styles.center}>
           Ni hann inte svara på den här frågan.
         </ThemedText>

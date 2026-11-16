@@ -15,15 +15,29 @@ export type MultiChoicePayload = { choices: number[] };
 export type RangePayload = { low: number; high: number };
 export type ClosestPayload = { value: number };
 
-export type AnswerPayload = ChoicePayload | MultiChoicePayload | RangePayload | ClosestPayload;
+export type FreeTextConfig = { fields: number };
+/** Expected answers for manual types – used to suggest a grading, the quizmaster decides. */
+export type ManualKey = { answers: string[] };
+export type FreeTextPayload = { answers: string[] };
+export type ListPayload = { items: string[] };
 
-/** Types the quizmaster can create today (manual types come with #3). */
+export type AnswerPayload =
+  | ChoicePayload
+  | MultiChoicePayload
+  | RangePayload
+  | ClosestPayload
+  | FreeTextPayload
+  | ListPayload;
+
+/** Question templates in the order the quizmaster sees them. */
 export const CREATABLE_TYPES: { type: QuestionType; label: string }[] = [
   { type: 'single_choice', label: 'Flerval' },
   { type: 'multi_choice', label: 'Flera rätt' },
   { type: 'true_false', label: '50/50' },
   { type: 'range', label: 'Spann' },
   { type: 'closest', label: 'Närmast' },
+  { type: 'free_text', label: 'Fritext' },
+  { type: 'list_timed', label: 'Lista' },
 ];
 
 export const TYPE_LABELS: Record<QuestionType, string> = {
@@ -43,6 +57,17 @@ export const isChoiceType = (type: QuestionType) =>
 
 export const isNumericType = (type: QuestionType) => type === 'range' || type === 'closest';
 
+/** Types the quizmaster grades by hand (with a suggestion from the key). */
+export const isManualType = (type: QuestionType) => type === 'free_text' || type === 'list_timed';
+
+/** The submitted texts of a manual answer: free_text fields or list items. */
+export function manualEntries(question: Question, payload: unknown): string[] {
+  if (!payload) return [];
+  if (question.type === 'free_text') return (payload as FreeTextPayload).answers ?? [];
+  if (question.type === 'list_timed') return (payload as ListPayload).items ?? [];
+  return [];
+}
+
 /** Short instruction shown with the question. */
 export function typeHint(question: Question): string | null {
   switch (question.type) {
@@ -52,6 +77,12 @@ export function typeHint(question: Question): string | null {
       return 'Ange ett spann. Det smalaste spannet som innehåller rätt svar vinner.';
     case 'closest':
       return 'Gissa ett tal. Närmast rätt svar vinner.';
+    case 'free_text': {
+      const fields = (question.config as FreeTextConfig).fields;
+      return fields > 1 ? `Skriv ${fields} svar` : null;
+    }
+    case 'list_timed':
+      return 'Skriv så många svar ni hinner innan tiden tar slut.';
     default:
       return null;
   }
@@ -105,6 +136,11 @@ export function describeAnswer(question: Question, payload: unknown): string {
     return `${formatNumber(low)}–${formatNumber(high, unit)}`;
   }
   if (question.type === 'closest') return formatNumber((payload as ClosestPayload).value, unit);
+  if (question.type === 'free_text') {
+    const texts = manualEntries(question, payload).filter((t) => t.trim());
+    return texts.length ? texts.join(', ') : '(tomt)';
+  }
+  if (question.type === 'list_timed') return `${manualEntries(question, payload).length} svar`;
   return '';
 }
 
@@ -137,6 +173,17 @@ export function resultText(
     if (low <= value && value <= high) return { text: 'Rätt, men ett smalare spann vann', tone: 'neutral' };
   }
   if (!won && question.type === 'closest') return { text: 'Någon var närmare', tone: 'danger' };
+  // Manual types: points = accepted entries × question points.
+  const accepted = Math.round((points ?? 0) / (question.points || 1));
+  if (question.type === 'list_timed') {
+    return won
+      ? { text: `${accepted} godkända svar! +${points}`, tone: 'success' }
+      : { text: 'Inga godkända svar', tone: 'danger' };
+  }
+  if (question.type === 'free_text' && won) {
+    const fields = (question.config as FreeTextConfig).fields;
+    if (fields > 1) return { text: `${accepted} av ${fields} rätt! +${points}`, tone: 'success' };
+  }
 
   return won ? { text: `Rätt! +${points}`, tone: 'success' } : { text: 'Fel svar', tone: 'danger' };
 }

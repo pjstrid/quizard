@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Countdown, useSecondsLeft } from '@/components/countdown';
+import { GradingPanel } from '@/components/grading-panel';
 import { QuestionBody } from '@/components/question-body';
 import { Scoreboard } from '@/components/scoreboard';
 import { TeamList } from '@/components/team-list';
@@ -12,11 +13,11 @@ import { Spacing } from '@/constants/theme';
 import { useAnswers, useCurrentQuestion, useScoreboard } from '@/hooks/use-game';
 import { useSessionLive } from '@/hooks/use-session-live';
 import { useTheme } from '@/hooks/use-theme';
-import { describeAnswer } from '@/lib/question-types';
+import { describeAnswer, isManualType } from '@/lib/question-types';
 import { friendlyError, supabase } from '@/lib/supabase';
 import type { Answer, GameSession, Question, Team } from '@/lib/types';
 
-type HostRpc = 'start_quiz' | 'reveal_question' | 'next_question' | 'finish_quiz';
+type HostRpc = 'start_quiz' | 'close_answers' | 'reveal_question' | 'next_question' | 'finish_quiz';
 
 /**
  * The quizmaster's game view: lobby → questions → reveal → final scoreboard.
@@ -104,10 +105,16 @@ type PlayingProps = {
 function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
   const { question, answerKey } = useCurrentQuestion(session);
   const answers = useAnswers(session.id, question?.id);
-  const scores = useScoreboard(session.id, `${session.current_position}-${session.phase}-${teams.length}`);
+  // scores_version changes when the host corrects a grading, so totals refetch.
+  const scores = useScoreboard(
+    session.id,
+    `${session.current_position}-${session.phase}-${teams.length}-${session.scores_version}`,
+  );
   const secondsLeft = useSecondsLeft(session.phase === 'question' ? session.phase_started_at : null, question?.time_limit_s ?? null);
 
   const revealed = session.phase === 'reveal';
+  const manual = question ? isManualType(question.type) : false;
+  const grading = manual && (session.phase === 'locked' || revealed);
   const isLast = session.question_index === session.question_count;
   const lockedCount = answers.filter((a) => a.locked_at).length;
 
@@ -119,25 +126,35 @@ function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
         FRÅGA {session.question_index} AV {session.question_count}
       </ThemedText>
       <ThemedText style={styles.prompt}>{question.prompt}</ThemedText>
-      {!revealed && <Countdown secondsLeft={secondsLeft} />}
+      {session.phase === 'question' && <Countdown secondsLeft={secondsLeft} />}
 
       <QuestionBody large question={question} answerKey={revealed ? answerKey : null} />
 
-      <Card>
-        <ThemedText type="smallBold" themeColor="textSecondary">
-          {revealed ? 'RESULTAT' : `LÅSTA SVAR (${lockedCount} AV ${teams.length})`}
-        </ThemedText>
-        {teams.map((team) => (
-          <TeamStatus
-            key={team.id}
-            team={team}
-            answer={answers.find((a) => a.team_id === team.id)}
-            revealed={revealed}
-            timeUp={secondsLeft === 0}
-            question={question}
-          />
-        ))}
-      </Card>
+      {grading ? (
+        <GradingPanel
+          question={question}
+          answerKey={answerKey}
+          teams={teams}
+          answers={answers}
+          showKey={!revealed} // after reveal the key is already shown above
+        />
+      ) : (
+        <Card>
+          <ThemedText type="smallBold" themeColor="textSecondary">
+            {revealed ? 'RESULTAT' : `LÅSTA SVAR (${lockedCount} AV ${teams.length})`}
+          </ThemedText>
+          {teams.map((team) => (
+            <TeamStatus
+              key={team.id}
+              team={team}
+              answer={answers.find((a) => a.team_id === team.id)}
+              revealed={revealed}
+              timeUp={secondsLeft === 0}
+              question={question}
+            />
+          ))}
+        </Card>
+      )}
 
       {revealed && <Scoreboard rows={scores} />}
 
@@ -148,6 +165,8 @@ function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
           onPress={() => run('next_question')}
           loading={busy === 'next_question'}
         />
+      ) : manual && session.phase === 'question' ? (
+        <Button title="Stäng svaren och rätta" onPress={() => run('close_answers')} loading={busy === 'close_answers'} />
       ) : (
         <Button title="Visa svar" onPress={() => run('reveal_question')} loading={busy === 'reveal_question'} />
       )}
