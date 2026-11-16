@@ -2,8 +2,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { ChoiceList } from '@/components/choice-list';
+import { AnswerInput } from '@/components/answer-input';
 import { Countdown, useSecondsLeft } from '@/components/countdown';
+import { QuestionBody } from '@/components/question-body';
 import { Scoreboard } from '@/components/scoreboard';
 import { TeamList } from '@/components/team-list';
 import { ThemedText } from '@/components/themed-text';
@@ -12,8 +13,9 @@ import { Spacing } from '@/constants/theme';
 import { useAnswers, useCurrentQuestion, useScoreboard } from '@/hooks/use-game';
 import { useSessionLive } from '@/hooks/use-session-live';
 import { useTheme } from '@/hooks/use-theme';
+import type { AnswerPayload } from '@/lib/question-types';
 import { friendlyError, supabase } from '@/lib/supabase';
-import type { GameSession, Question, SingleChoiceConfig, SingleChoiceKey, Team } from '@/lib/types';
+import type { GameSession, Question, Team } from '@/lib/types';
 import { useAuth } from '@/providers/auth-provider';
 
 /** The team's view: lobby → answer questions → see results → final scoreboard. */
@@ -98,49 +100,34 @@ function AnswerArea({
   answerKey: Record<string, unknown> | null;
 }) {
   const theme = useTheme();
-  const [selected, setSelected] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const myAnswer = useAnswers(session.id, question.id)[0]; // RLS: only our own answer
-  const lockedChoice = (myAnswer?.payload as { choice?: number } | undefined)?.choice ?? null;
   const revealed = session.phase === 'reveal';
   const secondsLeft = useSecondsLeft(revealed ? null : session.phase_started_at, question.time_limit_s);
   const timeUp = secondsLeft === 0;
   const canAnswer = !revealed && !myAnswer && !timeUp;
 
-  async function lockIn() {
-    if (selected === null) return;
+  async function lockIn(payload: AnswerPayload) {
     setError(null);
     setBusy(true);
-    const { error } = await supabase.rpc('submit_answer', {
-      p_session_id: session.id,
-      p_payload: { choice: selected },
-    });
+    const { error } = await supabase.rpc('submit_answer', { p_session_id: session.id, p_payload: payload });
     setBusy(false);
     if (error) setError(friendlyError(error));
   }
-
-  const options = (question.config as SingleChoiceConfig).options;
-  const correct = revealed ? ((answerKey as SingleChoiceKey | null)?.correct ?? null) : null;
 
   return (
     <>
       {!revealed && !myAnswer && <Countdown secondsLeft={secondsLeft} />}
 
-      <ChoiceList
-        large
-        options={options}
-        selected={myAnswer ? lockedChoice : selected}
-        correct={correct}
-        onSelect={canAnswer ? setSelected : undefined}
-      />
-
-      {canAnswer && (
+      {canAnswer ? (
         <>
+          <AnswerInput question={question} busy={busy} onSubmit={lockIn} />
           <ErrorText>{error}</ErrorText>
-          <Button title="Lås in svar" onPress={lockIn} loading={busy} disabled={selected === null} />
         </>
+      ) : (
+        <QuestionBody large question={question} payload={myAnswer?.payload} answerKey={revealed ? answerKey : null} />
       )}
 
       {!revealed && myAnswer && (

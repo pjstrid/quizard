@@ -2,14 +2,15 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { ChoiceList } from '@/components/choice-list';
-import { SingleChoiceForm } from '@/components/single-choice-form';
+import { QuestionBody } from '@/components/question-body';
+import { QuestionForm } from '@/components/question-form';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ErrorText, Screen } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
+import { TYPE_LABELS } from '@/lib/question-types';
 import { startSession } from '@/lib/start-session';
 import { friendlyError, supabase } from '@/lib/supabase';
-import type { Question, Quiz, SingleChoiceConfig, SingleChoiceKey } from '@/lib/types';
+import type { Question, Quiz } from '@/lib/types';
 
 type QuestionWithKey = Question & { question_keys: { answer: Record<string, unknown> } | null };
 
@@ -67,23 +68,18 @@ export default function QuizScreen() {
       {questions.map((q, i) => (
         <Card key={q.id}>
           <ThemedText type="smallBold" themeColor="textSecondary">
-            FRÅGA {i + 1}
-            {q.time_limit_s ? ` · ${q.time_limit_s} s` : ''}
+            FRÅGA {i + 1} · {TYPE_LABELS[q.type].toUpperCase()}
+            {q.time_limit_s ? ` · ${q.time_limit_s} S` : ''}
           </ThemedText>
           <ThemedText style={{ fontSize: 18, fontWeight: 700 }}>{q.prompt}</ThemedText>
-          {q.type === 'single_choice' && (
-            <ChoiceList
-              options={(q.config as SingleChoiceConfig).options}
-              correct={(q.question_keys?.answer as SingleChoiceKey | undefined)?.correct ?? null}
-            />
-          )}
+          <QuestionBody question={q} answerKey={q.question_keys?.answer} />
           <View style={{ alignItems: 'flex-end', marginTop: Spacing.one }}>
             <Button title="Ta bort" variant="danger" onPress={() => deleteQuestion(q.id)} />
           </View>
         </Card>
       ))}
 
-      <SingleChoiceForm quizId={id} onCreated={reload} />
+      <QuestionForm quizId={id} onCreated={reload} />
     </Screen>
   );
 }

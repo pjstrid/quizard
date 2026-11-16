@@ -2,8 +2,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { ChoiceList } from '@/components/choice-list';
 import { Countdown, useSecondsLeft } from '@/components/countdown';
+import { QuestionBody } from '@/components/question-body';
 import { Scoreboard } from '@/components/scoreboard';
 import { TeamList } from '@/components/team-list';
 import { ThemedText } from '@/components/themed-text';
@@ -12,8 +12,9 @@ import { Spacing } from '@/constants/theme';
 import { useAnswers, useCurrentQuestion, useScoreboard } from '@/hooks/use-game';
 import { useSessionLive } from '@/hooks/use-session-live';
 import { useTheme } from '@/hooks/use-theme';
+import { describeAnswer } from '@/lib/question-types';
 import { friendlyError, supabase } from '@/lib/supabase';
-import type { Answer, GameSession, SingleChoiceConfig, SingleChoiceKey, Team } from '@/lib/types';
+import type { Answer, GameSession, Question, Team } from '@/lib/types';
 
 type HostRpc = 'start_quiz' | 'reveal_question' | 'next_question' | 'finish_quiz';
 
@@ -120,13 +121,7 @@ function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
       <ThemedText style={styles.prompt}>{question.prompt}</ThemedText>
       {!revealed && <Countdown secondsLeft={secondsLeft} />}
 
-      {question.type === 'single_choice' && (
-        <ChoiceList
-          large
-          options={(question.config as SingleChoiceConfig).options}
-          correct={revealed ? ((answerKey as SingleChoiceKey | null)?.correct ?? null) : null}
-        />
-      )}
+      <QuestionBody large question={question} answerKey={revealed ? answerKey : null} />
 
       <Card>
         <ThemedText type="smallBold" themeColor="textSecondary">
@@ -139,7 +134,7 @@ function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
             answer={answers.find((a) => a.team_id === team.id)}
             revealed={revealed}
             timeUp={secondsLeft === 0}
-            options={(question.config as SingleChoiceConfig).options}
+            question={question}
           />
         ))}
       </Card>
@@ -161,23 +156,20 @@ function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
   );
 }
 
-const LETTERS = ['A', 'B', 'C', 'D'];
-
 function TeamStatus({
   team,
   answer,
   revealed,
   timeUp,
-  options,
+  question,
 }: {
   team: Team;
   answer: Answer | undefined;
   revealed: boolean;
   timeUp: boolean;
-  options: string[];
+  question: Question;
 }) {
   const theme = useTheme();
-  const choice = (answer?.payload as { choice?: number } | undefined)?.choice;
 
   let status: string;
   let color: string = theme.textSecondary;
@@ -189,7 +181,7 @@ function TeamStatus({
     status = 'Inget svar';
   } else {
     const right = (answer.points ?? 0) > 0;
-    status = `${choice !== undefined ? `${LETTERS[choice]} · ${options[choice]}` : ''}  ${right ? `✓ +${answer.points}` : '✗'}`;
+    status = `${describeAnswer(question, answer.payload)}  ${right ? `✓ +${answer.points}` : '✗'}`;
     color = right ? theme.success : theme.danger;
   }
 

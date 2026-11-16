@@ -3,29 +3,28 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-
-const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+import { LETTERS } from '@/lib/question-types';
 
 type Props = {
   options: string[];
-  /** The option this team picked (or is about to lock in). */
-  selected?: number | null;
-  /** Set after reveal to highlight the right option. */
-  correct?: number | null;
+  /** The option(s) this team picked (or is about to lock in). */
+  selected?: number[];
+  /** Set after reveal (or for the quiz author) to highlight the right option(s). */
+  correct?: number[] | null;
   onSelect?: (index: number) => void;
   disabled?: boolean;
   large?: boolean;
 };
 
-export function ChoiceList({ options, selected, correct, onSelect, disabled, large }: Props) {
+export function ChoiceList({ options, selected = [], correct, onSelect, disabled, large }: Props) {
   const theme = useTheme();
-  const revealed = correct !== null && correct !== undefined;
+  const revealed = !!correct && correct.length > 0;
 
   return (
     <View style={{ gap: Spacing.two }}>
       {options.map((option, index) => {
-        const isSelected = selected === index;
-        const isCorrect = revealed && correct === index;
+        const isSelected = selected.includes(index);
+        const isCorrect = revealed && correct.includes(index);
         const isWrongPick = revealed && isSelected && !isCorrect;
 
         const borderColor = isCorrect
