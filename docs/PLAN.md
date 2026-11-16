@@ -33,8 +33,8 @@ One thing to keep in mind: `postgres_changes` checks RLS per subscriber. For a f
 | `true_false` | 50/50 | `{options: [2]}` / `{correct: 1}` / `{choice: 1}` | auto |
 | `range` | Range | `{unit?}` / `{value: 100}` / `{low, high}` | auto: the narrowest range that contains the answer wins, ties share the points, no hit = 0 |
 | `closest` | Closest wins | `{unit?}` / `{value: 2097}` / `{value}` | auto: smallest distance wins, ties share the points |
-| `free_text` | Free text, 1–4 answers | `{fields: 3}` | manual |
-| `list_timed` | List as many as you can | `{seconds: 60}` | manual (points per accepted item) |
+| `free_text` | Free text, 1–4 answers | `{fields: 1–4}` / `{answers: [...]}` (optional) / `{answers: [...]}` | manual: points per accepted field |
+| `list_timed` | List as many as you can (needs `time_limit_s`) | `{}` / `{answers: [...]}` (optional) / `{items: [...]}` | manual: points per accepted item, auto-submitted when time is up |
 
 Correct answers live in a **separate table** (`question_keys`) that only the QM can read before the reveal. Otherwise a team could read the answer key straight from the database.
 
@@ -68,7 +68,7 @@ Team phone ──submit_answer RPC (lock in)──► Postgres
 
 - **Lock in**: the team sets `locked_at`. The big screen immediately shows "Team Blue has locked in" without revealing the answer.
 - **Reveal**: the QM calls the `reveal_question(session_id)` RPC, a Postgres function that scores the auto-graded types **on the server** and sets `phase = 'reveal'`.
-- **Manual grading**: the QM marks each answer right/wrong, which updates `answers.points`.
+- **Manual grading**: `close_answers` moves to phase `locked` and suggests a grading from the key (case-insensitive, each key value once). The QM accepts/rejects each entry with `grade_answer` (also after reveal, for corrections), which updates `answers.grading` and `answers.points` and bumps `game_sessions.scores_version` so every client refetches the scoreboard.
 - Countdown: `phase_started_at` + `time_limit_s`, so every client counts down from the same moment.
 
 ## MVP stages
@@ -76,7 +76,7 @@ Team phone ──submit_answer RPC (lock in)──► Postgres
 1. ✅ **Foundation**: Expo project, Supabase project, schema + RLS migration, auth (QM + anonymous teams), lobby where teams appear live.
 2. ✅ **Game loop with one question type** (`single_choice`): QM starts the quiz → "next question" → teams lock in → the host view updates live → reveal → points. *This is the core, so it is built first.*
 3. ✅ **Remaining auto-graded types**: `multi_choice`, `true_false`, `range`, `closest`.
-4. **Manual types**: `free_text`, `list_timed` + grading view for the QM.
+4. ✅ **Manual types**: `free_text`, `list_timed` + grading view for the QM.
 5. **Quiz editor**: the QM creates and edits quizzes using the templates.
 6. **Polish**: QR code to join, animations on the big screen.
 

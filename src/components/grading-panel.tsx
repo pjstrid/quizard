@@ -14,6 +14,8 @@ type Props = {
   answerKey: unknown;
   teams: Team[];
   answers: Answer[];
+  /** Show the key above the answers (hidden after reveal, when it is shown elsewhere). */
+  showKey?: boolean;
 };
 
 /**
@@ -21,7 +23,7 @@ type Props = {
  * reject it. Entries matching the key start out accepted (suggested by the
  * database in close_answers). Changes are saved right away via grade_answer.
  */
-export function GradingPanel({ question, answerKey, teams, answers }: Props) {
+export function GradingPanel({ question, answerKey, teams, answers, showKey = true }: Props) {
   const [error, setError] = useState<string | null>(null);
   const keyAnswers = (answerKey as ManualKey | null)?.answers ?? [];
 
@@ -39,7 +41,7 @@ export function GradingPanel({ question, answerKey, teams, answers }: Props) {
       <ThemedText type="smallBold" themeColor="textSecondary">
         RÄTTNING · TRYCK PÅ ETT SVAR FÖR ATT GODKÄNNA ELLER UNDERKÄNNA
       </ThemedText>
-      {keyAnswers.length > 0 && (
+      {showKey && keyAnswers.length > 0 && (
         <ThemedText themeColor="textSecondary">Facit: {keyAnswers.join(', ')}</ThemedText>
       )}
       <ErrorText>{error}</ErrorText>

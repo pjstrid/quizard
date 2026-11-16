@@ -334,6 +334,8 @@ await expect('reveal keeps the host grading', state4, same({ Ett: [2, [true, tru
 await expect('scoreboard after reveal', () => score4(T2), same({ Ett: 2, 'Två': 1, Tre: 0 }));
 await expect('host can correct after reveal', async () => grade(QM, false, await answerId('Två'), [true, true]), (r) => r?.rows[0]?.points === 2);
 await expect('scoreboard reflects the correction', () => score4(QM), same({ Ett: 2, 'Två': 2, Tre: 0 }));
+await expect('grading bumps scores_version so teams refetch', () => as(T1, true, `select scores_version from game_sessions where id = $1`, [s4.id]),
+  (r) => r?.rows[0]?.scores_version === 2); // two successful grade_answer calls so far
 await rpc(QM, false, 'next_question', s4.id);
 
 // Q2 list_timed, key Skåne/Uppland/Dalarna, revealed without a grading step

@@ -105,9 +105,11 @@ type PlayingProps = {
 function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
   const { question, answerKey } = useCurrentQuestion(session);
   const answers = useAnswers(session.id, question?.id);
-  // Refetch the scoreboard when points change, e.g. a grading correction after reveal.
-  const pointsKey = answers.map((a) => a.points ?? '-').join(',');
-  const scores = useScoreboard(session.id, `${session.current_position}-${session.phase}-${teams.length}-${pointsKey}`);
+  // scores_version changes when the host corrects a grading, so totals refetch.
+  const scores = useScoreboard(
+    session.id,
+    `${session.current_position}-${session.phase}-${teams.length}-${session.scores_version}`,
+  );
   const secondsLeft = useSecondsLeft(session.phase === 'question' ? session.phase_started_at : null, question?.time_limit_s ?? null);
 
   const revealed = session.phase === 'reveal';
@@ -129,7 +131,13 @@ function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
       <QuestionBody large question={question} answerKey={revealed ? answerKey : null} />
 
       {grading ? (
-        <GradingPanel question={question} answerKey={answerKey} teams={teams} answers={answers} />
+        <GradingPanel
+          question={question}
+          answerKey={answerKey}
+          teams={teams}
+          answers={answers}
+          showKey={!revealed} // after reveal the key is already shown above
+        />
       ) : (
         <Card>
           <ThemedText type="smallBold" themeColor="textSecondary">

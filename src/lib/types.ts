@@ -31,6 +31,8 @@ export type GameSession = {
   phase_started_at: string | null;
   question_index: number | null;
   question_count: number | null;
+  /** Bumped when grading changes points, so clients refetch the scoreboard. */
+  scores_version: number;
   created_at: string;
 };
 

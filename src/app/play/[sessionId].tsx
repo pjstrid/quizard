@@ -73,7 +73,10 @@ function TeamBadge({ team }: { team: Team }) {
 
 function PlayingView({ session, team, teamCount }: { session: GameSession; team: Team; teamCount: number }) {
   const { question, answerKey } = useCurrentQuestion(session);
-  const scores = useScoreboard(session.id, `${session.current_position}-${session.phase}-${teamCount}`);
+  const scores = useScoreboard(
+    session.id,
+    `${session.current_position}-${session.phase}-${teamCount}-${session.scores_version}`,
+  );
 
   if (!question) return <Loading />;
 
