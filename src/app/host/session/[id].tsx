@@ -138,6 +138,7 @@ function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
             team={team}
             answer={answers.find((a) => a.team_id === team.id)}
             revealed={revealed}
+            timeUp={secondsLeft === 0}
             options={(question.config as SingleChoiceConfig).options}
           />
         ))}
@@ -166,11 +167,13 @@ function TeamStatus({
   team,
   answer,
   revealed,
+  timeUp,
   options,
 }: {
   team: Team;
   answer: Answer | undefined;
   revealed: boolean;
+  timeUp: boolean;
   options: string[];
 }) {
   const theme = useTheme();
@@ -180,7 +183,7 @@ function TeamStatus({
   let color: string = theme.textSecondary;
   if (!revealed) {
     // Never show the answer itself before reveal – this screen may be on a TV.
-    status = answer?.locked_at ? '✓ Låst' : 'Tänker …';
+    status = answer?.locked_at ? '✓ Låst' : timeUp ? 'Hann inte' : 'Tänker …';
     if (answer?.locked_at) color = theme.success;
   } else if (!answer) {
     status = 'Inget svar';
