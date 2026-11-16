@@ -1,56 +1,96 @@
-# Welcome to your Expo app 👋
+# QUIZARD
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Build quizzes for your friends. Teams answer from their phones and the quizmaster's view updates live.
 
-## Get started
+Expo (React Native for iOS, Android and web) + Supabase (Postgres, Auth, Realtime). Architecture and stages are in [docs/PLAN.md](docs/PLAN.md).
 
-1. Install dependencies
+> The app UI is in Swedish for now. English will be added later.
 
-   ```bash
-   npm install
-   ```
+## Getting started
 
-2. Start the app
+### 1. Supabase project
 
-   ```bash
-   npx expo start
-   ```
+1. Create a project on [supabase.com](https://supabase.com).
+2. Go to **Authentication → Sign In / Providers** and turn on **Allow anonymous sign-ins**. Teams sign in anonymously.
+3. *(Optional for development)* Turn off **Confirm email** for the Email provider, so you can sign in right after creating a quizmaster account.
 
-In the output, you'll find options to open the app in a
+### 2. Database
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Apply the migrations in `supabase/migrations/`. There are two ways:
 
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+**Simplest:** open the **SQL Editor** in Supabase, paste the contents of each migration file in order and press *Run*.
 
-## Get a fresh project
-
-When you're ready, run:
+**With the CLI** (recommended once there are more migrations):
 
 ```bash
-npm run reset-project
+npx supabase login
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+```bash
+npx supabase link --project-ref <your-project-ref>
+```
 
-### Other setup steps
+```bash
+npx supabase db push
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+### 3. Environment variables
 
-## Learn more
+```bash
+cp .env.example .env
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+Fill in the **Project URL** (`https://<project-ref>.supabase.co`) and the **publishable key** from **Project Settings → API Keys**. Never put the secret key or the database password in the app.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### 4. Run
 
-## Join the community
+```bash
+npm run web
+```
 
-Join our community of developers creating universal apps.
+Or run `npx expo start` and open the app in a simulator or in Expo Go.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### Try the live flow
+
+1. Sign in as quizmaster in the browser, create a quiz and press **Starta spel**. A join code appears.
+2. Open the app on another device (or a private browser window), choose **Gå med i ett quiz** and enter the code and a team name.
+3. The team appears instantly in the quizmaster's lobby.
+
+## Checks
+
+```bash
+npm run test:db
+```
+
+Applies the migrations to an in-memory Postgres (PGlite) and tests the row level security rules. For example, it checks that teams cannot read the answer key early, see upcoming questions or set their own points.
+
+```bash
+npm run typecheck
+```
+
+```bash
+npm run lint
+```
+
+All three run in CI on every pull request.
+
+## Workflow
+
+- `main` always works. All work happens on short-lived branches (`feat/…`, `fix/…`, `chore/…`) merged through pull requests.
+- Link the issue in the PR description (`Closes #12`). The PR template lists what to fill in.
+- Database changes go in a **new** migration file. Never edit a migration that has already been applied.
+
+## Structure
+
+```
+src/app/                       Screens (Expo Router: every file is a route)
+  index.tsx                    Start: join / quizmaster
+  join.tsx                     Team: code + team name
+  play/[sessionId].tsx         Team view
+  login.tsx                    Quizmaster sign-in
+  host/                        Quizmaster screens (sign-in required)
+src/hooks/use-session-live.ts  Realtime subscription for session + teams
+src/lib/supabase.ts            Supabase client
+supabase/migrations/           Database schema + RLS
+supabase/tests/                RLS tests
+```
