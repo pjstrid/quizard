@@ -35,6 +35,7 @@ export function friendlyError(error: { message: string } | null | undefined): st
   const known: Record<string, string> = {
     session_not_found: 'Hittade inget quiz med den koden.',
     session_finished: 'Det quizet är redan avslutat.',
+    display_code_not_found: 'Hittade ingen storskärmskod. Kontrollera koden i quizmasterns app.',
     team_name_taken: 'Lagnamnet är redan taget. Välj ett annat.',
     invalid_team_name: 'Lagnamnet måste vara 1–40 tecken.',
     host_cannot_join: 'Du är quizmaster för det här quizet och kan inte gå med som lag.',

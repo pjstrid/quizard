@@ -8,13 +8,14 @@ const T1 = '22222222-2222-2222-2222-222222222222';
 const T2 = '33333333-3333-3333-3333-333333333333';
 const OTHER = '44444444-4444-4444-4444-444444444444';
 const OUT = '55555555-5555-5555-5555-555555555555';
+const TV = '66666666-6666-6666-6666-666666666666';
 
 // Minimal Supabase stub
 await db.exec(`
   create role anon nologin; create role authenticated nologin;
   create schema auth;
   create table auth.users (id uuid primary key);
-  insert into auth.users values ('${QM}'),('${T1}'),('${T2}'),('${OTHER}'),('${OUT}');
+  insert into auth.users values ('${QM}'),('${T1}'),('${T2}'),('${OTHER}'),('${OUT}'),('${TV}');
   create function auth.jwt() returns jsonb language sql stable as $$
     select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;
   create function auth.uid() returns uuid language sql stable as $$
@@ -407,6 +408,59 @@ await expect('delete renumbers after the game', async () => {
   return as(QM, false, `select prompt, position from questions where quiz_id = $1 order by position`, [quiz5.id]);
 }, (r) => JSON.stringify(r?.rows) === JSON.stringify([{ prompt: 'Tre!', position: 1 }, { prompt: 'Ett', position: 2 }]));
 await expect('delete removes the key too', () => as(QM, false, `select * from question_keys where question_id = $1`, [e2.id]), rows(0));
+
+// ---------------------------------------------------------------------------
+// Stage 6 (#5): big-screen display
+// ---------------------------------------------------------------------------
+
+const quiz6 = (await as(QM, false, `insert into quizzes (title) values ('Storskärm') returning *`)).rows[0];
+for (const prompt of ['Ett', 'Två']) {
+  await as(QM, false, `select * from create_question($1, 'single_choice', $2, $3, $4)`, [
+    quiz6.id, prompt, JSON.stringify({ options: ['A', 'B', 'C'] }), JSON.stringify({ correct: 0 }),
+  ]);
+}
+const s6 = (await as(QM, false, `insert into game_sessions (quiz_id) values ($1) returning *`, [quiz6.id])).rows[0];
+const otherSession = (await as(QM, false, `insert into game_sessions (quiz_id) values ($1) returning *`, [quiz6.id])).rows[0];
+await as(T1, true, `select * from join_session($1, 'Ett')`, [s6.join_code]);
+await as(T2, true, `select * from join_session($1, 'Två')`, [s6.join_code]);
+const tv = (sql, params) => as(TV, true, sql, params);
+
+await expect('display sees nothing before pairing', () => tv(`select * from game_sessions`), rows(0));
+await expect('team cannot get the display code', () => rpc(T1, true, 'get_display_code', s6.id), err(/not_session_host/));
+await expect('display codes are not readable directly', () => as(QM, false, `select * from display_codes`), err(/permission denied/));
+const displayCode = (await rpc(QM, false, 'get_display_code', s6.id)).rows[0].get_display_code;
+await expect('host gets the same code again', () => rpc(QM, false, 'get_display_code', s6.id), (r) => r?.rows[0]?.get_display_code === displayCode);
+await expect('display code differs from the join code', async () => ({ rows: [displayCode] }), (r) => r.rows[0] !== s6.join_code && r.rows[0].length === 6);
+await expect('the join code does not pair a display', () => tv(`select pair_display($1)`, [s6.join_code]), err(/display_code_not_found/));
+await expect('display pairs (lowercase code)', () => tv(`select pair_display($1) as id`, [displayCode.toLowerCase()]), (r) => r?.rows[0]?.id === s6.id);
+await expect('pairing twice is fine', () => tv(`select pair_display($1) as id`, [displayCode]), (r) => r?.rows[0]?.id === s6.id);
+await expect('display sees only its session', () => tv(`select id from game_sessions`), (r) => r?.rows.length === 1 && r.rows[0].id === s6.id);
+await expect('display sees the quiz title', () => tv(`select title from quizzes`), (r) => r?.rows[0]?.title === 'Storskärm');
+await expect('display sees all teams', () => tv(`select * from teams`), rows(2));
+await expect('lobby: display sees no questions', () => tv(`select * from questions`), rows(0));
+await expect('host sees the paired display', () => as(QM, false, `select * from session_displays where session_id = $1`, [s6.id]), rows(1));
+await expect('team does not see displays', () => as(T1, true, `select * from session_displays`), rows(0));
+
+await rpc(QM, false, 'start_quiz', s6.id);
+await as(T1, true, `select * from submit_answer($1, $2)`, [s6.id, JSON.stringify({ choice: 0 })]);
+await as(T2, true, `select * from submit_answer($1, $2)`, [s6.id, JSON.stringify({ choice: 1 })]);
+await expect('display sees every team\'s answer (lock-in status)', () => tv(`select * from answers`), rows(2));
+await expect('display sees only the current question', () => tv(`select prompt from questions`), (r) => r?.rows.length === 1 && r.rows[0].prompt === 'Ett');
+await expect('display cannot see the key before reveal', () => tv(`select * from question_keys`), rows(0));
+await expect('display cannot answer', () => tv(`select * from submit_answer($1, $2)`, [s6.id, JSON.stringify({ choice: 0 })]), err(/not_in_session/));
+await expect('display cannot control the game', () => rpc(TV, true, 'reveal_question', s6.id), err(/not_session_host/));
+await expect('display cannot write answers', () => tv(`update answers set points = 5`), err(/permission denied/));
+await expect('display cannot get the display code', () => rpc(TV, true, 'get_display_code', s6.id), err(/not_session_host/));
+await rpc(QM, false, 'reveal_question', s6.id);
+await expect('display sees the key after reveal', () => tv(`select * from question_keys`), rows(1));
+await expect('display sees the scoreboard', () => rpc(TV, true, 'get_scoreboard', s6.id),
+  (r) => r?.rows.length === 2 && r.rows[0].name === 'Ett' && r.rows[0].score === 1);
+await expect('host disconnects the display', () => as(QM, false, `delete from session_displays where session_id = $1 returning *`, [s6.id]), rows(1));
+await expect('disconnected display sees nothing', () => tv(`select * from answers`), rows(0));
+await rpc(QM, false, 'finish_quiz', s6.id);
+await expect('no pairing to a finished game', () => tv(`select pair_display($1)`, [displayCode]), err(/session_finished/));
+await expect('no display code for a finished game', () => rpc(QM, false, 'get_display_code', s6.id), err(/session_finished/));
+await expect('other sessions stay hidden', () => tv(`select * from game_sessions where id = $1`, [otherSession.id]), rows(0));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

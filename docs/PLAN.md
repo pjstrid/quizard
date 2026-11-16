@@ -20,7 +20,7 @@ In QUIZARD all of this becomes **data**: a quiz is rows in the database, every q
 | Backend | **Supabase** (Postgres, Auth, Realtime, RLS) | Relational data fits quiz → questions → answers better than one collection per question. Realtime replaces Firestore snapshot listeners. |
 | Team sign-in | Supabase **anonymous sign-in** | Teams join with a code/QR, no account needed |
 | QM sign-in | Email + password | The QM owns their quizzes |
-| Big screen (MVP) | Expo **web** route, e.g. `/present/[code]` | Open in a browser on a TV/laptop, control from the phone. Chromecast/AirPlay comes after MVP. |
+| Big screen (MVP) | Expo **web** route `/tv/[sessionId]`, paired with a secret display code | Open in a browser on a TV/laptop, control and grade from the phone. Chromecast/AirPlay comes after MVP. |
 
 One thing to keep in mind: `postgres_changes` checks RLS per subscriber. For a friends' quiz with a handful of teams this does not matter.
 
@@ -66,6 +66,7 @@ Big screen  ◄── game_sessions + answers (who has locked in) ─┘
 Team phone ──submit_answer RPC (lock in)──► Postgres
 ```
 
+- **Big screen**: the host fetches a secret display code (`get_display_code`); a TV browser signs in anonymously and calls `pair_display`, which adds it to `session_displays`. Paired displays get read-only RLS access to the session (all lock-ins, keys only after reveal) and can never write.
 - **Lock in**: the team sets `locked_at`. The big screen immediately shows "Team Blue has locked in" without revealing the answer.
 - **Reveal**: the QM calls the `reveal_question(session_id)` RPC, a Postgres function that scores the auto-graded types **on the server** and sets `phase = 'reveal'`.
 - **Manual grading**: `close_answers` moves to phase `locked` and suggests a grading from the key (case-insensitive, each key value once). The QM accepts/rejects each entry with `grade_answer` (also after reveal, for corrections), which updates `answers.grading` and `answers.points` and bumps `game_sessions.scores_version` so every client refetches the scoreboard.
@@ -78,6 +79,7 @@ Team phone ──submit_answer RPC (lock in)──► Postgres
 3. ✅ **Remaining auto-graded types**: `multi_choice`, `true_false`, `range`, `closest`.
 4. ✅ **Manual types**: `free_text`, `list_timed` + grading view for the QM.
 5. ✅ **Quiz editor**: the QM creates and edits quizzes using the templates.
-6. **Polish**: QR code to join, animations on the big screen.
+6. ✅ **Big-screen view** (#5): `/tv` pairing + read-only TV view.
+7. **Polish**: QR code to join, animations on the big screen.
 
 After MVP: English UI (i18n), Chromecast/AirPlay, images in questions (Supabase Storage), sharing quizzes, public quizzes.
