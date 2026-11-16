@@ -1,5 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
+import { TeamMarker } from '@/components/team-marker';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -39,7 +40,7 @@ export function TeamStatus({ team, answer, revealed, timeUp, question, large }: 
   const size = large ? 30 : 20;
   return (
     <View style={styles.row}>
-      <View style={[styles.dot, large && styles.dotLarge, { backgroundColor: team.color }]} />
+      <TeamMarker color={team.color} size={large ? 28 : 18} />
       <ThemedText style={{ flex: 1, fontSize: size, lineHeight: size * 1.3, fontWeight: 600 }}>{team.name}</ThemedText>
       <ThemedText style={{ color, fontWeight: 700, fontSize: large ? 26 : 16, lineHeight: large ? 34 : 22 }}>
         {status}
@@ -50,6 +51,4 @@ export function TeamStatus({ team, answer, revealed, timeUp, question, large }: 
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.one },
-  dot: { width: 18, height: 18, borderRadius: 9 },
-  dotLarge: { width: 28, height: 28, borderRadius: 14 },
 });

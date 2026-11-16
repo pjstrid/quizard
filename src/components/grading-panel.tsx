@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { TeamMarker } from '@/components/team-marker';
+import { Chamfer } from '@/components/chamfer';
 import { ThemedText } from '@/components/themed-text';
 import { Card, ErrorText } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
@@ -38,7 +40,7 @@ export function GradingPanel({ question, answerKey, teams, answers, showKey = tr
 
   return (
     <Card>
-      <ThemedText type="smallBold" themeColor="textSecondary">
+      <ThemedText type="label">
         RÄTTNING · TRYCK PÅ ETT SVAR FÖR ATT GODKÄNNA ELLER UNDERKÄNNA
       </ThemedText>
       {showKey && keyAnswers.length > 0 && (
@@ -52,7 +54,7 @@ export function GradingPanel({ question, answerKey, teams, answers, showKey = tr
         return (
           <View key={team.id} style={styles.team}>
             <View style={styles.teamHeader}>
-              <View style={[styles.dot, { backgroundColor: team.color }]} />
+              <TeamMarker color={team.color} size={16} />
               <ThemedText style={{ flex: 1, fontWeight: 700 }}>{team.name}</ThemedText>
               {answer && (
                 <ThemedText type="smallBold">
@@ -86,16 +88,20 @@ function EntryChip({ text, accepted, onPress }: { text: string; accepted: boolea
       accessibilityRole="checkbox"
       accessibilityState={{ checked: accepted, disabled: empty }}
       disabled={empty}
-      onPress={onPress}
-      style={[
-        styles.chip,
-        { borderColor: accepted ? theme.success : theme.border, backgroundColor: theme.background },
-        accepted && { borderWidth: 2 },
-      ]}>
-      <ThemedText style={{ color: accepted ? theme.success : theme.danger, fontWeight: 800 }}>
-        {accepted ? '✓' : '✗'}
-      </ThemedText>
-      <ThemedText themeColor={empty ? 'textSecondary' : 'text'}>{empty ? '(tomt)' : text}</ThemedText>
+      onPress={onPress}>
+      <Chamfer
+        style={styles.chip}
+        cut={8}
+        fill={theme.background}
+        stroke={accepted ? theme.success : theme.border}
+        strokeWidth={accepted ? 2 : 1}>
+        <ThemedText style={{ color: accepted ? theme.success : theme.danger, fontWeight: 800 }}>
+          {accepted ? '✓' : '✗'}
+        </ThemedText>
+        <ThemedText style={{ fontWeight: 600 }} themeColor={empty ? 'textSecondary' : 'text'}>
+          {empty ? '(tomt)' : text}
+        </ThemedText>
+      </Chamfer>
     </Pressable>
   );
 }
@@ -103,14 +109,11 @@ function EntryChip({ text, accepted, onPress }: { text: string; accepted: boolea
 const styles = StyleSheet.create({
   team: { gap: Spacing.two, paddingVertical: Spacing.two },
   teamHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  dot: { width: 16, height: 16, borderRadius: 8 },
   entries: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
-    borderWidth: 1,
-    borderRadius: 999,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },

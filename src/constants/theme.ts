@@ -35,30 +35,31 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof Colors;
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
+/**
+ * Fonts (#12): Orbitron – wide and angular – for the logo, headings, codes,
+ * numbers and small uppercase labels; Chakra Petch – angular but very
+ * readable – for everything else. Loaded in src/app/_layout.tsx.
+ *
+ * Custom fonts on native need one family per weight, so pick the family with
+ * fontFamilyFor() instead of setting fontWeight.
+ */
+export const FontFamily = {
+  display: { 500: 'Orbitron_500Medium', 600: 'Orbitron_600SemiBold', 700: 'Orbitron_700Bold', 800: 'Orbitron_800ExtraBold', 900: 'Orbitron_900Black' },
+  body: { 400: 'ChakraPetch_400Regular', 500: 'ChakraPetch_500Medium', 600: 'ChakraPetch_600SemiBold', 700: 'ChakraPetch_700Bold' },
+} as const;
+
+export type FontKind = keyof typeof FontFamily;
+
+export function fontFamilyFor(kind: FontKind, weight: number | string | undefined) {
+  const families = FontFamily[kind] as Record<number, string>;
+  const available = Object.keys(families).map(Number);
+  const wanted = Number(weight) || (kind === 'display' ? 700 : 500);
+  // Closest available weight (the body font stops at 700).
+  const best = available.reduce((a, b) => (Math.abs(b - wanted) < Math.abs(a - wanted) ? b : a));
+  return families[best];
+}
+
+export const Fonts = { mono: Platform.select({ ios: 'ui-monospace', web: 'var(--font-mono)', default: 'monospace' }) };
 
 export const Spacing = {
   half: 2,
@@ -72,3 +73,15 @@ export const Spacing = {
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
+
+
+/** Header style for every stack: Orbitron title, yellow back button. */
+export const stackScreenOptions = {
+  headerBackTitle: 'Tillbaka',
+  headerTintColor: Colors.primary,
+  headerShadowVisible: false,
+  headerStyle: { backgroundColor: Colors.background },
+  headerTitleStyle: { fontFamily: FontFamily.display[700], fontSize: 16, color: Colors.text },
+  headerBackTitleStyle: { fontFamily: FontFamily.body[600] },
+  contentStyle: { backgroundColor: Colors.background },
+};

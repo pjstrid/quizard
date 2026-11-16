@@ -43,6 +43,7 @@ export function Countdown({ secondsLeft }: { secondsLeft: number | null }) {
   if (secondsLeft === null) return null;
   return (
     <ThemedText
+      display
       accessibilityLiveRegion="polite"
       style={{
         fontSize: 56,

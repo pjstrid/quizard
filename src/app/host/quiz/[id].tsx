@@ -131,7 +131,7 @@ export default function QuizScreen() {
           />
         ) : (
           <Card key={q.id}>
-            <ThemedText type="smallBold" themeColor="textSecondary">
+            <ThemedText type="label">
               FRÅGA {i + 1} · {TYPE_LABELS[q.type].toUpperCase()} · {q.points} P
               {q.time_limit_s ? ` · ${q.time_limit_s} S` : ''}
             </ThemedText>

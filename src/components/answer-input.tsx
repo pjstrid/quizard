@@ -1,11 +1,12 @@
 import { useRef, useState, type ComponentRef } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
+import { Chamfer } from '@/components/chamfer';
 import { ChoiceList } from '@/components/choice-list';
 import { useSecondsLeft } from '@/components/countdown';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui';
-import { Spacing } from '@/constants/theme';
+import { FontFamily, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
   parseNumber,
@@ -128,7 +129,7 @@ function ListInput({ question, busy, onSubmit, startedAt }: Props) {
         <Button title="+" onPress={add} disabled={!draft.trim() || timeUp} />
       </View>
 
-      <ThemedText type="smallBold" themeColor="textSecondary">
+      <ThemedText type="label">
         {items.length} SVAR
       </ThemedText>
       <View style={styles.items}>
@@ -138,10 +139,11 @@ function ListInput({ question, busy, onSubmit, startedAt }: Props) {
             accessibilityRole="button"
             accessibilityLabel={`Ta bort ${item}`}
             disabled={timeUp}
-            onPress={() => setItems((prev) => prev.filter((_, j) => j !== i))}
-            style={[styles.item, { borderColor: theme.border, backgroundColor: theme.backgroundElement }]}>
-            <ThemedText>{item}</ThemedText>
-            <ThemedText themeColor="textSecondary">✕</ThemedText>
+            onPress={() => setItems((prev) => prev.filter((_, j) => j !== i))}>
+            <Chamfer style={styles.item} cut={7} fill={theme.backgroundElement} stroke={theme.border} strokeWidth={1}>
+              <ThemedText style={{ fontWeight: 600 }}>{item}</ThemedText>
+              <ThemedText themeColor="textSecondary">✕</ThemedText>
+            </Chamfer>
           </Pressable>
         ))}
       </View>
@@ -249,22 +251,20 @@ const styles = StyleSheet.create({
     minWidth: 0,
     minHeight: 60,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 2,
     paddingHorizontal: Spacing.three,
     fontSize: 24,
-    fontWeight: 700,
+    fontFamily: FontFamily.display[700],
   },
-  textInput: { fontSize: 20, fontWeight: 600 },
+  textInput: { fontSize: 20, fontFamily: FontFamily.body[600] },
   items: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   item: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
-    borderWidth: 1,
-    borderRadius: 999,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
+    paddingVertical: Spacing.one + 2,
   },
   dash: { fontSize: 24, fontWeight: 700 },
-  unit: { fontSize: 20, fontWeight: 600 },
+  unit: { fontSize: 18, fontWeight: 700 },
 });

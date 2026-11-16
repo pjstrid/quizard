@@ -1,6 +1,7 @@
 import { Redirect, Stack } from 'expo-router';
 
 import { Loading } from '@/components/ui';
+import { stackScreenOptions } from '@/constants/theme';
 import { useAuth } from '@/providers/auth-provider';
 
 /** Everything under /host requires a signed-in quizmaster (not an anonymous team). */
@@ -11,7 +12,7 @@ export default function HostLayout() {
   if (!session || isAnonymous) return <Redirect href="/login" />;
 
   return (
-    <Stack screenOptions={{ headerBackTitle: 'Tillbaka' }}>
+    <Stack screenOptions={stackScreenOptions}>
       <Stack.Screen name="index" options={{ title: 'Mina quiz' }} />
       <Stack.Screen name="quiz/[id]" options={{ title: 'Quiz' }} />
       <Stack.Screen name="session/[id]" options={{ title: 'Spel' }} />

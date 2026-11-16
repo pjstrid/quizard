@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
+import { FontFamily } from '@/constants/theme';
 import { Button, ErrorText, Screen, TextField } from '@/components/ui';
 import { friendlyError, supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
@@ -48,7 +49,7 @@ export default function TvPairScreen() {
         autoCorrect={false}
         maxLength={6}
         onSubmitEditing={() => code.trim().length === 6 && pair()}
-        style={{ fontSize: 28, letterSpacing: 6, fontWeight: 700 }}
+        style={{ fontSize: 26, letterSpacing: 6, fontFamily: FontFamily.display[800] }}
       />
       <ErrorText>{error}</ErrorText>
       <Button title="Anslut" onPress={pair} loading={busy} disabled={code.trim().length !== 6} />

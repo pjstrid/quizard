@@ -44,7 +44,7 @@ export function QuestionBody({ question, answerKey, payload, large, hideHint, gr
         {hint && <ThemedText themeColor="textSecondary">{hint}</ThemedText>}
         {payload != null && (
           <Card>
-            <ThemedText type="smallBold" themeColor="textSecondary">
+            <ThemedText type="label">
               ERT SVAR
             </ThemedText>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -63,7 +63,7 @@ export function QuestionBody({ question, answerKey, payload, large, hideHint, gr
         )}
         {answerKey != null && keyAnswers.length > 0 && (
           <Card>
-            <ThemedText type="smallBold" themeColor="textSecondary">
+            <ThemedText type="label">
               {question.type === 'list_timed' ? 'GODKÄNDA SVAR' : 'FACIT'}
             </ThemedText>
             <ThemedText style={{ fontSize: large ? 22 : 18, lineHeight: large ? 30 : 24, fontWeight: 700, color: theme.success }}>
@@ -95,7 +95,7 @@ export function QuestionBody({ question, answerKey, payload, large, hideHint, gr
       {hint && <ThemedText themeColor="textSecondary">{hint}</ThemedText>}
       {payload != null && (
         <Card>
-          <ThemedText type="smallBold" themeColor="textSecondary">
+          <ThemedText type="label">
             ERT SVAR
           </ThemedText>
           <ThemedText style={{ fontSize: large ? 28 : 20, lineHeight: large ? 34 : 26, fontWeight: 700 }}>
@@ -105,7 +105,7 @@ export function QuestionBody({ question, answerKey, payload, large, hideHint, gr
       )}
       {correct && (
         <Card>
-          <ThemedText type="smallBold" themeColor="textSecondary">
+          <ThemedText type="label">
             RÄTT SVAR
           </ThemedText>
           <ThemedText

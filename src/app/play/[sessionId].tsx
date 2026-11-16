@@ -7,6 +7,7 @@ import { Countdown, useSecondsLeft } from '@/components/countdown';
 import { QuestionBody } from '@/components/question-body';
 import { Scoreboard } from '@/components/scoreboard';
 import { TeamList } from '@/components/team-list';
+import { TeamMarker } from '@/components/team-marker';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ErrorText, Loading, Screen } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
@@ -65,7 +66,7 @@ export default function PlayScreen() {
 function TeamBadge({ team }: { team: Team }) {
   return (
     <View style={styles.badge}>
-      <View style={[styles.dot, { backgroundColor: team.color }]} />
+      <TeamMarker color={team.color} />
       <ThemedText type="smallBold">{team.name}</ThemedText>
     </View>
   );
@@ -82,7 +83,7 @@ function PlayingView({ session, team, teamCount }: { session: GameSession; team:
 
   return (
     <>
-      <ThemedText type="smallBold" themeColor="textSecondary">
+      <ThemedText type="label">
         FRÅGA {session.question_index} AV {session.question_count}
       </ThemedText>
       <ThemedText style={styles.prompt}>{question.prompt}</ThemedText>
@@ -196,7 +197,6 @@ function FinishedView({ session, team, onLeave }: { session: GameSession; team: 
 const styles = StyleSheet.create({
   center: { textAlign: 'center' },
   badge: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  dot: { width: 14, height: 14, borderRadius: 7 },
   prompt: { fontSize: 26, lineHeight: 34, fontWeight: 700 },
   result: { fontSize: 32, lineHeight: 40, fontWeight: 800, textAlign: 'center' },
 });

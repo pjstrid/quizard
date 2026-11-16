@@ -20,7 +20,7 @@ export default function StartScreen() {
       </View>
       <Button title="Gå med i ett quiz" onPress={() => router.push('/join')} />
       <Button title="Jag är quizmaster" variant="secondary" onPress={() => router.push('/host')} />
-      <Button title="Storskärm (tv eller dator)" variant="secondary" onPress={() => router.push('/tv')} />
+      <Button title="Storskärm" variant="secondary" onPress={() => router.push('/tv')} />
     </Screen>
   );
 }

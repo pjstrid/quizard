@@ -85,10 +85,10 @@ function JoinCode({ code }: { code: string }) {
   const theme = useTheme();
   return (
     <Card>
-      <ThemedText type="smallBold" themeColor="textSecondary" style={styles.center}>
+      <ThemedText type="label" style={styles.center}>
         GÅ MED PÅ QUIZARD MED KODEN
       </ThemedText>
-      <ThemedText style={[styles.code, { color: theme.primary }]} selectable>
+      <ThemedText display style={[styles.code, { color: theme.primary }]} selectable>
         {code}
       </ThemedText>
     </Card>
@@ -126,7 +126,7 @@ function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
   return (
     <>
       <DisplayPairing sessionId={session.id} compact />
-      <ThemedText type="smallBold" themeColor="textSecondary">
+      <ThemedText type="label">
         FRÅGA {session.question_index} AV {session.question_count}
       </ThemedText>
       <ThemedText style={styles.prompt}>{question.prompt}</ThemedText>
@@ -151,7 +151,7 @@ function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
         />
       ) : (
         <Card>
-          <ThemedText type="smallBold" themeColor="textSecondary">
+          <ThemedText type="label">
             {revealed ? 'RESULTAT' : `LÅSTA SVAR (${lockedCount} AV ${teams.length})`}
           </ThemedText>
           {teams.map((team) => (

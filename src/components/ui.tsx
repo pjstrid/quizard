@@ -9,16 +9,33 @@ import {
   type TextInputProps,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Defs, Path, Pattern, Rect } from 'react-native-svg';
 
+import { Chamfer } from '@/components/chamfer';
 import { ThemedText } from '@/components/themed-text';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { FontFamily, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+
+/** A faint technical grid behind every screen. */
+export function GridBackground() {
+  return (
+    <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
+      <Defs>
+        <Pattern id="grid" width={32} height={32} patternUnits="userSpaceOnUse">
+          <Path d="M 32 0 L 0 0 0 32" fill="none" stroke="#FFFFFF" strokeOpacity={0.045} strokeWidth={1} />
+        </Pattern>
+      </Defs>
+      <Rect width="100%" height="100%" fill="url(#grid)" />
+    </Svg>
+  );
+}
 
 /** Page wrapper: safe area, scroll, centered max width. */
 export function Screen({ children, centered }: PropsWithChildren<{ centered?: boolean }>) {
   const theme = useTheme();
   return (
     <SafeAreaView edges={['bottom', 'left', 'right']} style={{ flex: 1, backgroundColor: theme.background }}>
+      <GridBackground />
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[styles.scroll, centered && { flexGrow: 1, justifyContent: 'center' }]}>
@@ -42,27 +59,32 @@ export function Button({ title, onPress, variant = 'primary', loading, disabled,
   const theme = useTheme();
   const isPrimary = variant === 'primary';
   const inactive = disabled || loading;
-  const color = variant === 'danger' ? theme.danger : isPrimary ? (inactive ? theme.textSecondary : theme.onPrimary) : theme.text;
+  const color =
+    variant === 'danger' ? theme.danger : isPrimary ? (inactive ? theme.textSecondary : theme.onPrimary) : theme.text;
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? title}
-      accessibilityState={{ disabled: !!(disabled || loading), busy: !!loading }}
+      accessibilityState={{ disabled: !!inactive, busy: !!loading }}
       onPress={onPress}
-      disabled={disabled || loading}
-      style={({ pressed }) => [
-        styles.button,
-        isPrimary
-          ? // A dimmed yellow looks muddy on dark grey, so inactive primary buttons turn grey.
-            { backgroundColor: inactive ? theme.backgroundSelected : theme.primary }
-          : { borderWidth: 1.5, borderColor: variant === 'danger' ? theme.danger : theme.border },
-        inactive && !isPrimary && { opacity: 0.5 },
-        pressed && { opacity: 0.8 },
-      ]}>
-      {loading ? (
-        <ActivityIndicator color={color} />
-      ) : (
-        <ThemedText style={{ color, fontWeight: 800, fontSize: 17 }}>{title}</ThemedText>
+      disabled={inactive}
+      style={({ pressed }) => [inactive && !isPrimary && { opacity: 0.5 }, pressed && { transform: [{ scale: 0.98 }] }]}>
+      {({ pressed }) => (
+        <Chamfer
+          style={styles.button}
+          cut={12}
+          // A dimmed yellow looks muddy on dark grey, so inactive primary buttons turn grey.
+          fill={isPrimary ? (inactive ? theme.backgroundSelected : theme.primary) : pressed ? theme.backgroundSelected : 'transparent'}
+          stroke={isPrimary ? undefined : variant === 'danger' ? theme.danger : theme.border}
+          glow={isPrimary && !inactive ? 'rgba(255, 210, 0, 0.35)' : undefined}>
+          {loading ? (
+            <ActivityIndicator color={color} />
+          ) : (
+            <ThemedText display style={[styles.buttonText, { color }]}>
+              {title}
+            </ThemedText>
+          )}
+        </Chamfer>
       )}
     </Pressable>
   );
@@ -111,7 +133,7 @@ export function TextField({ label, ...props }: TextInputProps & { label: string 
   const theme = useTheme();
   return (
     <View style={{ gap: Spacing.one }}>
-      <ThemedText type="smallBold">{label}</ThemedText>
+      <ThemedText type="label">{label}</ThemedText>
       <TextInput
         placeholderTextColor={theme.textSecondary}
         {...props}
@@ -126,12 +148,19 @@ export function TextField({ label, ...props }: TextInputProps & { label: string 
   );
 }
 
-export function Card({ children }: { children: ReactNode }) {
+/** Content panel with angular corners. `highlight` adds a yellow accent on the cut corner. */
+export function Card({ children, highlight }: { children: ReactNode; highlight?: boolean }) {
   const theme = useTheme();
   return (
-    <View style={[styles.card, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
+    <Chamfer
+      style={styles.card}
+      cut={16}
+      fill={theme.backgroundElement}
+      stroke={highlight ? theme.primary : theme.border}
+      strokeWidth={highlight ? 1.5 : 1}
+      accent={theme.primary}>
       {children}
-    </View>
+    </Chamfer>
   );
 }
 
@@ -154,19 +183,20 @@ const styles = StyleSheet.create({
   scroll: { padding: Spacing.four, alignItems: 'center' },
   content: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
   button: {
-    minHeight: 52,
-    borderRadius: 14,
+    minHeight: 54,
     paddingHorizontal: Spacing.four,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  buttonText: { fontSize: 14, lineHeight: 20, fontWeight: 800, letterSpacing: 1.5, textTransform: 'uppercase', textAlign: 'center' },
   input: {
     minHeight: 50,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 2,
     paddingHorizontal: Spacing.three,
     fontSize: 18,
+    fontFamily: FontFamily.body[600],
   },
-  card: { borderWidth: 1, borderRadius: 16, padding: Spacing.three, gap: Spacing.two },
+  card: { padding: Spacing.three + 2, gap: Spacing.two },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

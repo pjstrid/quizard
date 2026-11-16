@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
+import { Chamfer } from '@/components/chamfer';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ErrorText, TextField } from '@/components/ui';
-import { Spacing } from '@/constants/theme';
+import { FontFamily, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
   CREATABLE_TYPES,
@@ -166,7 +167,7 @@ export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }:
 
   return (
     <Card>
-      <ThemedText type="smallBold" themeColor="textSecondary">
+      <ThemedText type="label">
         {question ? 'REDIGERA FRÅGA' : 'NY FRÅGA'}
       </ThemedText>
       <Chips
@@ -179,7 +180,7 @@ export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }:
 
       {rules && (
         <>
-          <ThemedText type="smallBold">
+          <ThemedText type="label">
             {rules.correct[1] === 1
               ? 'Alternativ (tryck på bokstaven för rätt svar)'
               : `Alternativ (markera ${rules.correct[0]}–${rules.correct[1]} rätta)`}
@@ -192,15 +193,17 @@ export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }:
                   accessibilityRole={rules.correct[1] === 1 ? 'radio' : 'checkbox'}
                   accessibilityState={{ checked: isCorrect }}
                   accessibilityLabel={`Markera ${LETTERS[i]} som rätt svar`}
-                  onPress={() => toggleCorrect(i)}
-                  style={[
-                    styles.letter,
-                    { borderColor: isCorrect ? theme.success : theme.border },
-                    isCorrect && { backgroundColor: theme.success },
-                  ]}>
-                  <ThemedText style={{ fontWeight: 800, color: isCorrect ? theme.onSuccess : theme.text }}>
-                    {isCorrect ? '✓' : LETTERS[i]}
-                  </ThemedText>
+                  onPress={() => toggleCorrect(i)}>
+                  <Chamfer
+                    style={styles.letter}
+                    corners="all"
+                    cut={8}
+                    fill={isCorrect ? theme.success : theme.background}
+                    stroke={isCorrect ? theme.success : theme.border}>
+                    <ThemedText display style={{ fontWeight: 800, color: isCorrect ? theme.onSuccess : theme.text }}>
+                      {isCorrect ? '✓' : LETTERS[i]}
+                    </ThemedText>
+                  </Chamfer>
                 </Pressable>
                 <TextInput
                   value={text}
@@ -221,13 +224,13 @@ export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }:
 
       {isFreeText && (
         <>
-          <ThemedText type="smallBold">Antal svar per lag</ThemedText>
+          <ThemedText type="label">Antal svar per lag</ThemedText>
           <Chips
             items={[1, 2, 3, 4].map((n) => ({ key: String(n), label: String(n) }))}
             value={String(fields)}
             onChange={(k) => setFields(Number(k))}
           />
-          <ThemedText type="smallBold">Facit (valfritt)</ThemedText>
+          <ThemedText type="label">Facit (valfritt)</ThemedText>
           <ThemedText themeColor="textSecondary">
             Svar som matchar facit föreslås som godkända. Du rättar alltid själv innan svaret visas.
           </ThemedText>
@@ -247,7 +250,7 @@ export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }:
 
       {isList && (
         <>
-          <ThemedText type="smallBold">Godkända svar (valfritt, ett per rad)</ThemedText>
+          <ThemedText type="label">Godkända svar (valfritt, ett per rad)</ThemedText>
           <ThemedText themeColor="textSecondary">
             Svar som finns i listan föreslås som godkända. Du rättar alltid själv innan svaret visas.
           </ThemedText>
@@ -283,14 +286,14 @@ export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }:
         </View>
       )}
 
-      <ThemedText type="smallBold">Tidsgräns</ThemedText>
+      <ThemedText type="label">Tidsgräns</ThemedText>
       <Chips
         items={(isList ? LIST_TIME_LIMITS : TIME_LIMITS).map((l) => ({ key: String(l), label: l ? `${l} s` : 'Ingen' }))}
         value={String(timeLimit)}
         onChange={(k) => setTimeLimit(k === 'null' ? null : Number(k))}
       />
 
-      <ThemedText type="smallBold">Poäng</ThemedText>
+      <ThemedText type="label">Poäng</ThemedText>
       <Chips
         items={POINTS.map((p) => ({ key: String(p), label: `${p} p` }))}
         value={String(points)}
@@ -328,12 +331,19 @@ function Chips({
           <Pressable
             key={item.key}
             accessibilityRole="radio"
+            accessibilityLabel={item.label}
             accessibilityState={{ checked: active }}
-            onPress={() => onChange(item.key)}
-            style={[styles.chip, { borderColor: active ? theme.primary : theme.border }, active && { backgroundColor: theme.primary }]}>
-            <ThemedText type="smallBold" style={{ color: active ? theme.onPrimary : theme.text }}>
-              {item.label}
-            </ThemedText>
+            onPress={() => onChange(item.key)}>
+            <Chamfer
+              style={styles.chip}
+              corners="tl-br"
+              cut={8}
+              fill={active ? theme.primary : 'transparent'}
+              stroke={active ? theme.primary : theme.border}>
+              <ThemedText display style={[styles.chipText, { color: active ? theme.onPrimary : theme.text }]}>
+                {item.label}
+              </ThemedText>
+            </Chamfer>
           </Pressable>
         );
       })}
@@ -343,16 +353,18 @@ function Chips({
 
 const styles = StyleSheet.create({
   optionRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  letter: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
+  letter: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  input: {
+    flex: 1,
+    minHeight: 44,
+    borderWidth: 1,
+    borderRadius: 2,
+    paddingHorizontal: Spacing.three,
+    fontSize: 16,
+    fontFamily: FontFamily.body[600],
   },
-  input: { flex: 1, minHeight: 44, borderWidth: 1, borderRadius: 12, paddingHorizontal: Spacing.three, fontSize: 16 },
   multiline: { minHeight: 120, paddingTop: Spacing.two, textAlignVertical: 'top' },
   chips: { flexDirection: 'row', gap: Spacing.two, flexWrap: 'wrap' },
-  chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
+  chip: { paddingHorizontal: Spacing.three + 2, paddingVertical: Spacing.two + 2 },
+  chipText: { fontSize: 12, lineHeight: 16, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' },
 });
