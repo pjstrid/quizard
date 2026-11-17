@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 
 import { Chamfer } from '@/components/chamfer';
 import { ThemedText } from '@/components/themed-text';
@@ -61,8 +62,11 @@ export function ChoiceList({ options, selected = [], correct, onSelect, disabled
                 </ThemedText>
               </Chamfer>
               <ThemedText style={[styles.text, large && styles.textLarge, { color }]}>{option}</ThemedText>
-              {isCorrect && <ThemedText style={[styles.mark, { color }]}>✓</ThemedText>}
-              {isWrongPick && <ThemedText style={[styles.mark, { color }]}>✗</ThemedText>}
+              {(isCorrect || isWrongPick) && (
+                <Animated.View entering={ZoomIn.springify().damping(9)}>
+                  <ThemedText style={[styles.mark, { color }]}>{isCorrect ? '✓' : '✗'}</ThemedText>
+                </Animated.View>
+              )}
             </Chamfer>
           </Pressable>
         );

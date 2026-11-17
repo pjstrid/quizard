@@ -7,9 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "quizard",
     "userInterfaceStyle": "dark",
-    "ios": {
-      "icon": "./assets/expo.icon"
-    },
+    "ios": {},
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#1E2022",
@@ -30,7 +28,7 @@
         {
           "backgroundColor": "#1E2022",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 140
         }
       ],
       "expo-sqlite"

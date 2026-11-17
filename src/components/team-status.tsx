@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 
 import { TeamMarker } from '@/components/team-marker';
 import { ThemedText } from '@/components/themed-text';
@@ -42,9 +43,12 @@ export function TeamStatus({ team, answer, revealed, timeUp, question, large }: 
     <View style={styles.row}>
       <TeamMarker color={team.color} size={large ? 28 : 18} />
       <ThemedText style={{ flex: 1, fontSize: size, lineHeight: size * 1.3, fontWeight: 600 }}>{team.name}</ThemedText>
-      <ThemedText style={{ color, fontWeight: 700, fontSize: large ? 26 : 16, lineHeight: large ? 34 : 22 }}>
-        {status}
-      </ThemedText>
+      {/* Keyed by the text, so "✓ Låst" and the result pop in when they change (#6). */}
+      <Animated.View key={status} entering={ZoomIn.springify().damping(12)}>
+        <ThemedText style={{ color, fontWeight: 700, fontSize: large ? 26 : 16, lineHeight: large ? 34 : 22 }}>
+          {status}
+        </ThemedText>
+      </Animated.View>
     </View>
   );
 }

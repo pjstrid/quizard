@@ -60,7 +60,8 @@ export function Chamfer({
   const c = Math.min(cut, size.h / 3, size.w / 3);
 
   return (
-    <View style={style} onLayout={onLayout}>
+    // Until the size is known (first frame), fall back to a plain filled box so nothing flashes empty.
+    <View style={[style, size.w === 0 && fill !== 'transparent' && { backgroundColor: fill }]} onLayout={onLayout}>
       {size.w > 0 && (
         <Svg
           width={size.w}

@@ -80,6 +80,6 @@ Team phone ──submit_answer RPC (lock in)──► Postgres
 4. ✅ **Manual types**: `free_text`, `list_timed` + grading view for the QM.
 5. ✅ **Quiz editor**: the QM creates and edits quizzes using the templates.
 6. ✅ **Big-screen view** (#5): `/tv` pairing + read-only TV view.
-7. **Polish**: QR code to join, animations on the big screen.
+7. ✅ **Polish** (#6): QR code to join, animations, resume after reload, app icon and splash.
 
 After MVP: English UI (i18n), Chromecast/AirPlay, images in questions (Supabase Storage), sharing quizzes, public quizzes.

@@ -1,8 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Countdown, useSecondsLeft } from '@/components/countdown';
+import { JoinQr } from '@/components/join-qr';
 import { QuestionBody } from '@/components/question-body';
 import { Scoreboard } from '@/components/scoreboard';
 import { TeamList } from '@/components/team-list';
@@ -92,11 +94,20 @@ function Lobby({ session, teams, wide }: { session: GameSession; teams: Team[]; 
     <Columns
       wide={wide}
       left={
-        <Card>
+        <Card highlight>
           <ThemedText style={styles.lead}>
             Gå med{joinAddress ? ` på ${joinAddress}` : ' i QUIZARD-appen'} med koden
           </ThemedText>
-          <ThemedText display style={[styles.joinCode, { color: theme.primary }]}>{session.join_code}</ThemedText>
+          <ThemedText display style={[styles.joinCode, { color: theme.primary }]} numberOfLines={1}>
+            {session.join_code}
+          </ThemedText>
+          <View style={styles.joinRow}>
+            <JoinQr code={session.join_code} size={wide ? 200 : 170} />
+            <View style={{ flex: 1, minWidth: 180, gap: Spacing.two }}>
+              <ThemedText type="label">Eller skanna</ThemedText>
+              <ThemedText style={styles.qrHint}>Rikta mobilkameran mot koden – lagnamnet är allt som behövs.</ThemedText>
+            </View>
+          </View>
           <ThemedText themeColor="textSecondary" style={styles.lead}>
             Väntar på att quizmastern startar …
           </ThemedText>
@@ -128,7 +139,8 @@ function Playing({ session, teams, wide }: { session: GameSession; teams: Team[]
     <Columns
       wide={wide}
       left={
-        <>
+        // Each new question slides in on the big screen (#6).
+        <Animated.View key={question.id} entering={FadeInDown.springify().damping(16)} style={styles.column}>
           <ThemedText display themeColor="textSecondary" style={styles.counter}>
             FRÅGA {session.question_index} AV {session.question_count}
           </ThemedText>
@@ -138,7 +150,7 @@ function Playing({ session, teams, wide }: { session: GameSession; teams: Team[]
             <ThemedText style={[styles.lead, { color: theme.primary }]}>Quizmastern rättar …</ThemedText>
           )}
           <QuestionBody large question={question} answerKey={revealed ? answerKey : null} />
-        </>
+        </Animated.View>
       }
       right={
         <>
@@ -193,8 +205,10 @@ const styles = StyleSheet.create({
   headerCode: { fontSize: 22, lineHeight: 30, fontWeight: 700, letterSpacing: 2 },
   columns: { gap: Spacing.four },
   column: { gap: Spacing.three },
+  joinRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.four, alignItems: 'center', justifyContent: 'center' },
+  qrHint: { fontSize: 22, lineHeight: 30, fontWeight: 600 },
   lead: { fontSize: 26, lineHeight: 34, fontWeight: 600, textAlign: 'center' },
-  joinCode: { fontSize: 120, lineHeight: 140, fontWeight: 800, letterSpacing: 16, textAlign: 'center' },
+  joinCode: { fontSize: 96, lineHeight: 116, fontWeight: 800, letterSpacing: 10, textAlign: 'center' },
   counter: { fontSize: 22, lineHeight: 30, fontWeight: 700 },
   prompt: { fontSize: 44, lineHeight: 54, fontWeight: 800 },
   winner: { fontSize: 48, lineHeight: 60, fontWeight: 800 },
