@@ -79,8 +79,16 @@ export function typeHint(t: Strings, question: Question): string | null {
   }
 }
 
+/**
+ * Numbers are grouped from five digits ("12 500"), not four, so years read
+ * as years ("1945", not "1 945") – also when the question has no unit.
+ * This follows Swedish typographic practice and works for English too.
+ */
 export function formatNumber(t: Strings, value: number, unit?: string) {
-  const text = value.toLocaleString(t.locale, { maximumFractionDigits: 6 });
+  const text = value.toLocaleString(t.locale, {
+    maximumFractionDigits: 6,
+    useGrouping: Math.abs(value) >= 10000,
+  });
   return unit ? `${text} ${unit}` : text;
 }
 
