@@ -10,11 +10,13 @@ import { QuestionBody } from '@/components/question-body';
 import { Scoreboard } from '@/components/scoreboard';
 import { TeamList } from '@/components/team-list';
 import { TeamStatus } from '@/components/team-status';
+import { WinnerBanner } from '@/components/winner-banner';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ErrorText, Loading, Screen } from '@/components/ui';
 import { useAnswers, useCurrentQuestion, useScoreboard } from '@/hooks/use-game';
 import { useSessionLive } from '@/hooks/use-session-live';
 import { useTheme } from '@/hooks/use-theme';
+import { useT } from '@/i18n';
 import { isManualType } from '@/lib/question-types';
 import { friendlyError, supabase } from '@/lib/supabase';
 import type { GameSession, Team } from '@/lib/types';
@@ -27,6 +29,7 @@ type HostRpc = 'start_quiz' | 'close_answers' | 'reveal_question' | 'next_questi
  */
 export default function HostSessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const t = useT();
   const { session, teams, loading, error: loadError } = useSessionLive(id);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<HostRpc | null>(null);
@@ -48,9 +51,9 @@ export default function HostSessionScreen() {
   if (!session) {
     return (
       <Screen centered>
-        <ThemedText type="subtitle">Sessionen finns inte längre</ThemedText>
+        <ThemedText type="subtitle">{t.host.sessionGone}</ThemedText>
         <ErrorText>{loadError}</ErrorText>
-        <Button title="Tillbaka" onPress={() => router.back()} />
+        <Button title={t.common.back} onPress={() => router.back()} />
       </Screen>
     );
   }
@@ -65,16 +68,16 @@ export default function HostSessionScreen() {
           <ErrorText>{error}</ErrorText>
           {teams.length === 0 && (
             <ThemedText themeColor="textSecondary" style={styles.center}>
-              Quizet kan startas när minst ett lag har gått med.
+              {t.host.startHint}
             </ThemedText>
           )}
           <Button
-            title="Starta quiz"
+            title={t.host.start}
             onPress={() => run('start_quiz')}
             loading={busy === 'start_quiz'}
             disabled={teams.length === 0}
           />
-          <Button title="Avbryt" variant="danger" onPress={cancelSession} />
+          <Button title={t.common.cancel} variant="danger" onPress={cancelSession} />
         </>
       )}
 
@@ -89,10 +92,11 @@ export default function HostSessionScreen() {
 
 function JoinCode({ code }: { code: string }) {
   const theme = useTheme();
+  const t = useT();
   return (
     <Card>
       <ThemedText type="label" style={styles.center}>
-        GÅ MED PÅ QUIZARD MED KODEN
+        {t.host.joinWithCode}
       </ThemedText>
       <ThemedText display style={[styles.code, { color: theme.primary }]} selectable>
         {code}
@@ -111,6 +115,7 @@ type PlayingProps = {
 };
 
 function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
+  const t = useT();
   const { question, answerKey } = useCurrentQuestion(session);
   const answers = useAnswers(session.id, question?.id);
   // scores_version changes when the host corrects a grading, so totals refetch.
@@ -134,7 +139,7 @@ function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
     <>
       <DisplayPairing sessionId={session.id} compact />
       <ThemedText type="label">
-        FRÅGA {session.question_index} AV {session.question_count}
+        {t.common.questionOf(session.question_index, session.question_count)}
       </ThemedText>
       <ThemedText style={styles.prompt}>{question.prompt}</ThemedText>
       {session.phase === 'question' && <Countdown secondsLeft={secondsLeft} />}
@@ -142,7 +147,7 @@ function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
       <QuestionBody large question={question} answerKey={revealed || peek ? answerKey : null} />
       {!revealed && (
         <Button
-          title={peek ? 'Dölj facit' : 'Visa facit (bara för dig)'}
+          title={peek ? t.host.hideKey : t.host.peekKey}
           variant="secondary"
           onPress={() => setPeek((p) => !p)}
         />
@@ -159,7 +164,7 @@ function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
       ) : (
         <Card>
           <ThemedText type="label">
-            {revealed ? 'RESULTAT' : `LÅSTA SVAR (${lockedCount} AV ${teams.length})`}
+            {revealed ? t.common.results : t.host.lockedAnswers(lockedCount, teams.length)}
           </ThemedText>
           {teams.map((team) => (
             <TeamStatus
@@ -179,21 +184,22 @@ function PlayingView({ session, teams, error, busy, run }: PlayingProps) {
       <ErrorText>{error}</ErrorText>
       {revealed ? (
         <Button
-          title={isLast ? 'Visa slutresultat' : 'Nästa fråga'}
+          title={isLast ? t.host.showFinal : t.host.next}
           onPress={() => run('next_question')}
           loading={busy === 'next_question'}
         />
       ) : manual && session.phase === 'question' ? (
-        <Button title="Stäng svaren och rätta" onPress={() => run('close_answers')} loading={busy === 'close_answers'} />
+        <Button title={t.host.closeAndGrade} onPress={() => run('close_answers')} loading={busy === 'close_answers'} />
       ) : (
-        <Button title="Visa svar" onPress={() => run('reveal_question')} loading={busy === 'reveal_question'} />
+        <Button title={t.host.reveal} onPress={() => run('reveal_question')} loading={busy === 'reveal_question'} />
       )}
-      <Button title="Avsluta quiz" variant="danger" onPress={() => run('finish_quiz')} loading={busy === 'finish_quiz'} />
+      <Button title={t.host.finish} variant="danger" onPress={() => run('finish_quiz')} loading={busy === 'finish_quiz'} />
     </>
   );
 }
 
 function FinishedView({ session }: { session: GameSession }) {
+  const t = useT();
   const scores = useScoreboard(session.id, session.status);
   // Nobody wins with zero points.
   const winners = scores.filter((s) => s.score > 0 && s.score === scores[0].score);
@@ -201,15 +207,11 @@ function FinishedView({ session }: { session: GameSession }) {
   return (
     <>
       <ThemedText type="subtitle" style={styles.center}>
-        Quizet är slut!
+        {t.common.quizOver}
       </ThemedText>
-      {winners.length > 0 && (
-        <ThemedText style={[styles.center, { fontSize: 22 }]}>
-          🏆 {winners.map((w) => w.name).join(' & ')}
-        </ThemedText>
-      )}
-      <Scoreboard rows={scores} title="SLUTRESULTAT" />
-      <Button title="Tillbaka till mina quiz" onPress={() => router.dismissTo('/host')} />
+      {winners.length > 0 && <WinnerBanner names={winners.map((w) => w.name)} />}
+      <Scoreboard rows={scores} title={t.common.finalResult} />
+      <Button title={t.host.backToQuizzes} onPress={() => router.dismissTo('/host')} />
     </>
   );
 }

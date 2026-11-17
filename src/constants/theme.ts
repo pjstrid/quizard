@@ -77,7 +77,6 @@ export const MaxContentWidth = 800;
 
 /** Header style for every stack: Orbitron title, yellow back button. */
 export const stackScreenOptions = {
-  headerBackTitle: 'Tillbaka',
   headerTintColor: Colors.primary,
   headerShadowVisible: false,
   headerStyle: { backgroundColor: Colors.background },

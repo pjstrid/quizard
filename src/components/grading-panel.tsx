@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Card, ErrorText } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useT } from '@/i18n';
 import { manualEntries, type ManualKey } from '@/lib/question-types';
 import { friendlyError, supabase } from '@/lib/supabase';
 import type { Answer, Question, Team } from '@/lib/types';
@@ -26,6 +27,7 @@ type Props = {
  * database in close_answers). Changes are saved right away via grade_answer.
  */
 export function GradingPanel({ question, answerKey, teams, answers, showKey = true }: Props) {
+  const t = useT();
   const [error, setError] = useState<string | null>(null);
   const keyAnswers = (answerKey as ManualKey | null)?.answers ?? [];
 
@@ -41,10 +43,10 @@ export function GradingPanel({ question, answerKey, teams, answers, showKey = tr
   return (
     <Card>
       <ThemedText type="label">
-        RÄTTNING · TRYCK PÅ ETT SVAR FÖR ATT GODKÄNNA ELLER UNDERKÄNNA
+        {t.grading.title}
       </ThemedText>
       {showKey && keyAnswers.length > 0 && (
-        <ThemedText themeColor="textSecondary">Facit: {keyAnswers.join(', ')}</ThemedText>
+        <ThemedText themeColor="textSecondary">{t.grading.key(keyAnswers.join(', '))}</ThemedText>
       )}
       <ErrorText>{error}</ErrorText>
 
@@ -58,11 +60,11 @@ export function GradingPanel({ question, answerKey, teams, answers, showKey = tr
               <ThemedText style={{ flex: 1, fontWeight: 700 }}>{team.name}</ThemedText>
               {answer && (
                 <ThemedText type="smallBold">
-                  {answer.points ?? 0} p
+                  {t.common.points(answer.points ?? 0)}
                 </ThemedText>
               )}
             </View>
-            {!answer && <ThemedText themeColor="textSecondary">Inget svar</ThemedText>}
+            {!answer && <ThemedText themeColor="textSecondary">{t.common.noAnswer}</ThemedText>}
             <View style={styles.entries}>
               {entries.map((text, i) => (
                 <EntryChip
@@ -82,6 +84,7 @@ export function GradingPanel({ question, answerKey, teams, answers, showKey = tr
 
 function EntryChip({ text, accepted, onPress }: { text: string; accepted: boolean; onPress: () => void }) {
   const theme = useTheme();
+  const t = useT();
   const empty = !text.trim();
   return (
     <Pressable
@@ -99,7 +102,7 @@ function EntryChip({ text, accepted, onPress }: { text: string; accepted: boolea
           {accepted ? '✓' : '✗'}
         </ThemedText>
         <ThemedText style={{ fontWeight: 600 }} themeColor={empty ? 'textSecondary' : 'text'}>
-          {empty ? '(tomt)' : text}
+          {empty ? t.common.empty : text}
         </ThemedText>
       </Chamfer>
     </Pressable>

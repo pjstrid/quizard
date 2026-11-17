@@ -3,15 +3,17 @@ import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated'
 import { TeamMarker } from '@/components/team-marker';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui';
+import { useT } from '@/i18n';
 import type { Team } from '@/lib/types';
 
 export function TeamList({ teams, large }: { teams: Team[]; large?: boolean }) {
+  const t = useT();
   return (
     <Card>
       <ThemedText type="label">
-        LAG ({teams.length})
+        {t.common.teams(teams.length)}
       </ThemedText>
-      {teams.length === 0 && <ThemedText themeColor="textSecondary">Inga lag ännu …</ThemedText>}
+      {teams.length === 0 && <ThemedText themeColor="textSecondary">{t.common.noTeamsYet}</ThemedText>}
       {teams.map((team) => (
         // New teams slide in as they join (#6).
         <Animated.View

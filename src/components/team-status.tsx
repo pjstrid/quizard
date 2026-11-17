@@ -5,6 +5,7 @@ import { TeamMarker } from '@/components/team-marker';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useT } from '@/i18n';
 import { describeAnswer } from '@/lib/question-types';
 import type { Answer, Question, Team } from '@/lib/types';
 
@@ -24,17 +25,18 @@ type Props = {
  */
 export function TeamStatus({ team, answer, revealed, timeUp, question, large }: Props) {
   const theme = useTheme();
+  const t = useT();
 
   let status: string;
   let color: string = theme.textSecondary;
   if (!revealed) {
-    status = answer?.locked_at ? '✓ Låst' : timeUp ? 'Hann inte' : 'Tänker …';
+    status = answer?.locked_at ? t.status.locked : timeUp ? t.status.missed : t.status.thinking;
     if (answer?.locked_at) color = theme.success;
   } else if (!answer) {
-    status = 'Inget svar';
+    status = t.common.noAnswer;
   } else {
     const right = (answer.points ?? 0) > 0;
-    status = `${describeAnswer(question, answer.payload)}  ${right ? `✓ +${answer.points}` : '✗'}`;
+    status = `${describeAnswer(t, question, answer.payload)}  ${right ? `✓ +${answer.points}` : '✗'}`;
     color = right ? theme.success : theme.danger;
   }
 
@@ -43,7 +45,7 @@ export function TeamStatus({ team, answer, revealed, timeUp, question, large }: 
     <View style={styles.row}>
       <TeamMarker color={team.color} size={large ? 28 : 18} />
       <ThemedText style={{ flex: 1, fontSize: size, lineHeight: size * 1.3, fontWeight: 600 }}>{team.name}</ThemedText>
-      {/* Keyed by the text, so "✓ Låst" and the result pop in when they change (#6). */}
+      {/* Keyed by the text, so the lock mark and the result pop in when they change (#6). */}
       <Animated.View key={status} entering={ZoomIn.springify().damping(12)}>
         <ThemedText style={{ color, fontWeight: 700, fontSize: large ? 26 : 16, lineHeight: large ? 34 : 22 }}>
           {status}

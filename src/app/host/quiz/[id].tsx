@@ -7,7 +7,7 @@ import { QuestionForm } from '@/components/question-form';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ConfirmButton, ErrorText, Screen, TextField } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
-import { TYPE_LABELS } from '@/lib/question-types';
+import { useT } from '@/i18n';
 import { startSession } from '@/lib/start-session';
 import { friendlyError, supabase } from '@/lib/supabase';
 import type { GameSession, Question, Quiz } from '@/lib/types';
@@ -17,6 +17,7 @@ type QuestionWithKey = Question & { question_keys: { answer: Record<string, unkn
 /** Quiz editor: rename, add, edit, reorder and delete questions, delete the quiz. */
 export default function QuizScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const t = useT();
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [title, setTitle] = useState('');
   const [questions, setQuestions] = useState<QuestionWithKey[]>([]);
@@ -80,13 +81,13 @@ export default function QuizScreen() {
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: quiz?.title ?? 'Quiz' }} />
+      <Stack.Screen options={{ title: quiz?.title ?? t.nav.quiz }} />
 
       <Card>
-        <TextField label="Quizets namn" value={title} onChangeText={setTitle} maxLength={120} />
+        <TextField label={t.editor.quizName} value={title} onChangeText={setTitle} maxLength={120} />
         {titleChanged && (
           <Button
-            title="Spara namn"
+            title={t.editor.saveName}
             loading={busy === 'title'}
             onPress={() => act('title', () => supabase.from('quizzes').update({ title: title.trim() }).eq('id', id))}
           />
@@ -94,7 +95,7 @@ export default function QuizScreen() {
       </Card>
 
       <Button
-        title={`Starta spel (${questions.length} ${questions.length === 1 ? 'fråga' : 'frågor'})`}
+        title={t.editor.startGame(questions.length)}
         onPress={start}
         loading={busy === 'start'}
         disabled={questions.length === 0}
@@ -103,16 +104,16 @@ export default function QuizScreen() {
 
       {inPlay && (
         <Card>
-          <ThemedText type="smallBold">Ett spel med det här quizet pågår</ThemedText>
+          <ThemedText type="smallBold">{t.editor.gameRunning}</ThemedText>
           <ThemedText themeColor="textSecondary">
-            Frågorna kan inte ändras förrän spelet är avslutat (kod {running.map((g) => g.join_code).join(', ')}).
+            {t.editor.lockedWhileRunning(running.map((g) => g.join_code).join(', '))}
           </ThemedText>
           <Button
-            title="Gå till spelet"
+            title={t.editor.goToGame}
             variant="secondary"
             onPress={() => router.push({ pathname: '/host/session/[id]', params: { id: running[0].id } })}
           />
-          <ConfirmButton title="Avsluta spelet" onConfirm={finishRunning} loading={busy === 'finish'} />
+          <ConfirmButton title={t.editor.finishGame} onConfirm={finishRunning} loading={busy === 'finish'} />
         </Card>
       )}
 
@@ -132,30 +133,30 @@ export default function QuizScreen() {
         ) : (
           <Card key={q.id}>
             <ThemedText type="label">
-              FRÅGA {i + 1} · {TYPE_LABELS[q.type].toUpperCase()} · {q.points} P
-              {q.time_limit_s ? ` · ${q.time_limit_s} S` : ''}
+              {t.editor.questionHeader(i + 1)} · {t.types[q.type]} · {t.common.points(q.points)}
+              {q.time_limit_s ? ` · ${t.common.seconds(q.time_limit_s)}` : ''}
             </ThemedText>
             <ThemedText style={styles.prompt}>{q.prompt}</ThemedText>
             <QuestionBody question={q} answerKey={q.question_keys?.answer} />
             <View style={styles.toolbar}>
               <Button
                 title="↑"
-                accessibilityLabel="Flytta upp"
+                accessibilityLabel={t.editor.moveUp}
                 variant="secondary"
                 disabled={i === 0 || busy !== null || inPlay}
                 onPress={() => act(`move-${q.id}`, () => supabase.rpc('move_question', { p_question_id: q.id, p_offset: -1 }))}
               />
               <Button
                 title="↓"
-                accessibilityLabel="Flytta ner"
+                accessibilityLabel={t.editor.moveDown}
                 variant="secondary"
                 disabled={i === questions.length - 1 || busy !== null || inPlay}
                 onPress={() => act(`move-${q.id}`, () => supabase.rpc('move_question', { p_question_id: q.id, p_offset: 1 }))}
               />
               <View style={{ flex: 1 }} />
-              <Button title="Redigera" variant="secondary" disabled={inPlay} onPress={() => setEditingId(q.id)} />
+              <Button title={t.editor.edit} variant="secondary" disabled={inPlay} onPress={() => setEditingId(q.id)} />
               <ConfirmButton
-                title="Ta bort"
+                title={t.common.delete}
                 disabled={inPlay}
                 loading={busy === `delete-${q.id}`}
                 onConfirm={() => act(`delete-${q.id}`, () => supabase.rpc('delete_question', { p_question_id: q.id }))}
@@ -168,8 +169,8 @@ export default function QuizScreen() {
       {editingId === null && !inPlay && <QuestionForm quizId={id} onSaved={reload} />}
 
       <ConfirmButton
-        title="Ta bort quizet"
-        confirmTitle="Tryck igen för att ta bort quizet och alla frågor"
+        title={t.editor.deleteQuiz}
+        confirmTitle={t.editor.deleteQuizConfirm}
         onConfirm={async () => {
           const { error } = await supabase.from('quizzes').delete().eq('id', id);
           if (error) return setError(friendlyError(error));

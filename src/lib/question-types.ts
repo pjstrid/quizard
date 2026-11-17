@@ -1,3 +1,4 @@
+import type { Strings } from '@/i18n';
 import type { Question, QuestionType } from '@/lib/types';
 
 /**
@@ -29,26 +30,16 @@ export type AnswerPayload =
   | FreeTextPayload
   | ListPayload;
 
-/** Question templates in the order the quizmaster sees them. */
-export const CREATABLE_TYPES: { type: QuestionType; label: string }[] = [
-  { type: 'single_choice', label: 'Flerval' },
-  { type: 'multi_choice', label: 'Flera rätt' },
-  { type: 'true_false', label: '50/50' },
-  { type: 'range', label: 'Spann' },
-  { type: 'closest', label: 'Närmast' },
-  { type: 'free_text', label: 'Fritext' },
-  { type: 'list_timed', label: 'Lista' },
+/** Question templates in the order the quizmaster sees them. Labels live in the translations (`t.types`). */
+export const CREATABLE_TYPES: QuestionType[] = [
+  'single_choice',
+  'multi_choice',
+  'true_false',
+  'range',
+  'closest',
+  'free_text',
+  'list_timed',
 ];
-
-export const TYPE_LABELS: Record<QuestionType, string> = {
-  single_choice: 'Flerval',
-  multi_choice: 'Flera rätt',
-  true_false: '50/50',
-  range: 'Spann',
-  closest: 'Närmast vinner',
-  free_text: 'Fritext',
-  list_timed: 'Lista',
-};
 
 export const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
@@ -69,33 +60,47 @@ export function manualEntries(question: Question, payload: unknown): string[] {
 }
 
 /** Short instruction shown with the question. */
-export function typeHint(question: Question): string | null {
+export function typeHint(t: Strings, question: Question): string | null {
   switch (question.type) {
     case 'multi_choice':
-      return `Välj ${(question.config as ChoiceConfig).pick} alternativ`;
+      return t.hints.pick((question.config as ChoiceConfig).pick ?? 2);
     case 'range':
-      return 'Ange ett spann. Det smalaste spannet som innehåller rätt svar vinner.';
+      return t.hints.range;
     case 'closest':
-      return 'Gissa ett tal. Närmast rätt svar vinner.';
+      return t.hints.closest;
     case 'free_text': {
       const fields = (question.config as FreeTextConfig).fields;
-      return fields > 1 ? `Skriv ${fields} svar` : null;
+      return fields > 1 ? t.hints.fields(fields) : null;
     }
     case 'list_timed':
-      return 'Skriv så många svar ni hinner innan tiden tar slut.';
+      return t.hints.list;
     default:
       return null;
   }
 }
 
-export function formatNumber(value: number, unit?: string) {
-  const text = value.toLocaleString('sv-SE', { maximumFractionDigits: 6 });
+/**
+ * Numbers are grouped from five digits ("12 500"), not four, so years read
+ * as years ("1945", not "1 945") – also when the question has no unit.
+ * This follows Swedish typographic practice and works for English too.
+ */
+export function formatNumber(t: Strings, value: number, unit?: string) {
+  const text = value.toLocaleString(t.locale, {
+    maximumFractionDigits: 6,
+    useGrouping: Math.abs(value) >= 10000,
+  });
   return unit ? `${text} ${unit}` : text;
 }
 
-/** Parses user input like "2 097,5" → 2097.5. Returns null when it is not a number. */
-export function parseNumber(text: string): number | null {
-  const cleaned = text.replace(/\s/g, '').replace(',', '.');
+/**
+ * Parses user input like "2 097,5" → 2097.5. Returns null when it is not a number.
+ * A comma is a decimal separator, except in English where ",ddd" is a thousands
+ * separator ("2,097.5"). A dot always works as decimal separator.
+ */
+export function parseNumber(text: string, decimal: ',' | '.' = ','): number | null {
+  let cleaned = text.replace(/\s/g, '');
+  if (decimal === '.') cleaned = cleaned.replace(/,(?=\d{3}(\D|$))/g, '');
+  cleaned = cleaned.replace(',', '.');
   if (cleaned === '' || cleaned === '-' || cleaned === '.') return null;
   const value = Number(cleaned);
   return Number.isFinite(value) ? value : null;
@@ -119,7 +124,7 @@ export function correctIndexes(key: unknown): number[] {
 }
 
 /** Human-readable answer, e.g. "A · Oslo", "A, D", "90–110 st", "2 100 m". */
-export function describeAnswer(question: Question, payload: unknown): string {
+export function describeAnswer(t: Strings, question: Question, payload: unknown): string {
   if (isChoiceType(question.type)) {
     const options = (question.config as ChoiceConfig).options;
     const picked = pickedIndexes(payload);
@@ -133,57 +138,58 @@ export function describeAnswer(question: Question, payload: unknown): string {
   const unit = (question.config as NumericConfig).unit;
   if (question.type === 'range') {
     const { low, high } = payload as RangePayload;
-    return `${formatNumber(low)}–${formatNumber(high, unit)}`;
+    return `${formatNumber(t, low)}–${formatNumber(t, high, unit)}`;
   }
-  if (question.type === 'closest') return formatNumber((payload as ClosestPayload).value, unit);
+  if (question.type === 'closest') return formatNumber(t, (payload as ClosestPayload).value, unit);
   if (question.type === 'free_text') {
     const texts = manualEntries(question, payload).filter((t) => t.trim());
-    return texts.length ? texts.join(', ') : '(tomt)';
+    return texts.length ? texts.join(', ') : t.common.empty;
   }
-  if (question.type === 'list_timed') return `${manualEntries(question, payload).length} svar`;
+  if (question.type === 'list_timed') return t.answer.entries(manualEntries(question, payload).length);
   return '';
 }
 
 /** Human-readable correct answer for numeric types. */
-export function describeKey(question: Question, key: unknown): string | null {
+export function describeKey(t: Strings, question: Question, key: unknown): string | null {
   if (!key || !isNumericType(question.type)) return null;
-  return formatNumber((key as NumericKey).value, (question.config as NumericConfig).unit);
+  return formatNumber(t, (key as NumericKey).value, (question.config as NumericConfig).unit);
 }
 
 /** Result line shown on the team's phone after reveal. */
 export function resultText(
+  t: Strings,
   question: Question,
   payload: unknown,
   key: unknown,
   points: number | null,
 ): { text: string; tone: 'success' | 'danger' | 'neutral' } {
-  if (payload == null) return { text: 'Inget svar', tone: 'neutral' };
+  if (payload == null) return { text: t.common.noAnswer, tone: 'neutral' };
   const won = (points ?? 0) > 0;
 
   if (question.type === 'multi_choice' && key) {
     const correct = correctIndexes(key);
     const hits = pickedIndexes(payload).filter((i) => correct.includes(i)).length;
     if (correct.length > 2 && won && hits < correct.length) {
-      return { text: `${hits} av ${correct.length} rätt! +${points}`, tone: 'success' };
+      return { text: t.result.partly(hits, correct.length, points ?? 0), tone: 'success' };
     }
   }
   if (!won && key && question.type === 'range') {
     const { low, high } = payload as RangePayload;
     const value = (key as NumericKey).value;
-    if (low <= value && value <= high) return { text: 'Rätt, men ett smalare spann vann', tone: 'neutral' };
+    if (low <= value && value <= high) return { text: t.result.narrowerWon, tone: 'neutral' };
   }
-  if (!won && question.type === 'closest') return { text: 'Någon var närmare', tone: 'danger' };
+  if (!won && question.type === 'closest') return { text: t.result.someoneCloser, tone: 'danger' };
   // Manual types: points = accepted entries × question points.
   const accepted = Math.round((points ?? 0) / (question.points || 1));
   if (question.type === 'list_timed') {
     return won
-      ? { text: `${accepted} godkända svar! +${points}`, tone: 'success' }
-      : { text: 'Inga godkända svar', tone: 'danger' };
+      ? { text: t.result.accepted(accepted, points ?? 0), tone: 'success' }
+      : { text: t.result.noneAccepted, tone: 'danger' };
   }
   if (question.type === 'free_text' && won) {
     const fields = (question.config as FreeTextConfig).fields;
-    if (fields > 1) return { text: `${accepted} av ${fields} rätt! +${points}`, tone: 'success' };
+    if (fields > 1) return { text: t.result.partly(accepted, fields, points ?? 0), tone: 'success' };
   }
 
-  return won ? { text: `Rätt! +${points}`, tone: 'success' } : { text: 'Fel svar', tone: 'danger' };
+  return won ? { text: t.result.right(points ?? 0), tone: 'success' } : { text: t.result.wrong, tone: 'danger' };
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
 import { useTheme } from '@/hooks/use-theme';
+import { useT } from '@/i18n';
 
 /**
  * Seconds left of a question's time limit, counted from the shared
@@ -40,6 +41,7 @@ export function useSecondsLeft(startedAt: string | null, limitSeconds: number | 
 
 export function Countdown({ secondsLeft }: { secondsLeft: number | null }) {
   const theme = useTheme();
+  const t = useT();
   if (secondsLeft === null) return null;
   return (
     <ThemedText
@@ -54,7 +56,7 @@ export function Countdown({ secondsLeft }: { secondsLeft: number | null }) {
         // Yellow timer, red for the last five seconds.
         color: secondsLeft <= 5 ? theme.danger : theme.primary,
       }}>
-      {secondsLeft > 0 ? secondsLeft : 'Tiden är ute!'}
+      {secondsLeft > 0 ? secondsLeft : t.common.timeUp}
     </ThemedText>
   );
 }

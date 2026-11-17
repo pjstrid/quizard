@@ -6,6 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ErrorText, TextField } from '@/components/ui';
 import { FontFamily, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useT, type Strings } from '@/i18n';
 import {
   CREATABLE_TYPES,
   LETTERS,
@@ -32,8 +33,8 @@ const OPTION_RULES: Partial<Record<QuestionType, { start: number; min: number; m
   true_false: { start: 2, min: 2, max: 2, correct: [1, 1] },
 };
 
-function initialOptions(type: QuestionType) {
-  if (type === 'true_false') return ['Sant', 'Falskt'];
+function initialOptions(t: Strings, type: QuestionType) {
+  if (type === 'true_false') return [t.form.trueOption, t.form.falseOption];
   return Array.from({ length: OPTION_RULES[type]?.start ?? 0 }, () => '');
 }
 
@@ -69,10 +70,11 @@ type Props = {
 /** Create or edit a question using one of the seven templates. */
 export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }: Props) {
   const theme = useTheme();
+  const t = useT();
   const initial = question ? stateFrom(question, answerKey) : null;
   const [type, setType] = useState<QuestionType>(question?.type ?? 'single_choice');
   const [prompt, setPrompt] = useState(question?.prompt ?? '');
-  const [options, setOptions] = useState(() => initial?.options ?? initialOptions('single_choice'));
+  const [options, setOptions] = useState(() => initial?.options ?? initialOptions(t, 'single_choice'));
   const [correct, setCorrect] = useState<number[]>(initial?.correct ?? []);
   const [value, setValue] = useState(initial?.value ?? '');
   const [unit, setUnit] = useState(initial?.unit ?? '');
@@ -90,7 +92,7 @@ export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }:
 
   function changeType(next: QuestionType) {
     setType(next);
-    setOptions(initialOptions(next));
+    setOptions(initialOptions(t, next));
     setCorrect([]);
     setError(null);
     // A list question always runs against the clock.
@@ -109,17 +111,17 @@ export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }:
   // Empty options are dropped; keep track of where the correct ones end up.
   const filled = options.map((text, index) => ({ text: text.trim(), index })).filter((o) => o.text);
   const correctMapped = filled.flatMap((o, i) => (correct.includes(o.index) ? [i] : []));
-  const numericValue = parseNumber(value);
+  const numericValue = parseNumber(value, t.decimal);
 
   let problem: string | null = null;
-  if (!prompt.trim()) problem = 'Skriv en fråga.';
+  if (!prompt.trim()) problem = t.form.problemPrompt;
   else if (rules) {
-    if (filled.length < rules.min) problem = `Fyll i minst ${rules.min} alternativ.`;
+    if (filled.length < rules.min) problem = t.form.problemOptions(rules.min);
     else if (correctMapped.length < rules.correct[0])
-      problem = rules.correct[0] === 1 ? 'Markera rätt svar.' : `Markera ${rules.correct[0]}–${rules.correct[1]} rätta svar.`;
+      problem = rules.correct[0] === 1 ? t.form.problemCorrect : t.form.problemCorrectRange(rules.correct[0], rules.correct[1]);
   } else if (isList) {
-    if (!timeLimit) problem = 'Välj en tidsgräns.';
-  } else if (!isFreeText && numericValue === null) problem = 'Ange rätt svar som ett tal.';
+    if (!timeLimit) problem = t.form.problemTimeLimit;
+  } else if (!isFreeText && numericValue === null) problem = t.form.problemNumber;
 
   function buildRequest() {
     if (rules) {
@@ -157,7 +159,7 @@ export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }:
     if (error) return setError(friendlyError(error));
     if (question) return onSaved();
     setPrompt('');
-    setOptions(initialOptions(type));
+    setOptions(initialOptions(t, type));
     setCorrect([]);
     setValue('');
     setKeyAnswers(['', '', '', '']);
@@ -168,22 +170,29 @@ export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }:
   return (
     <Card>
       <ThemedText type="label">
-        {question ? 'REDIGERA FRÅGA' : 'NY FRÅGA'}
+        {question ? t.form.editQuestion : t.form.newQuestion}
       </ThemedText>
       <Chips
-        items={CREATABLE_TYPES.map((t) => ({ key: t.type, label: t.label }))}
+        items={CREATABLE_TYPES.map((type) => ({ key: type, label: t.types[type] }))}
         value={type}
         onChange={(t) => changeType(t as QuestionType)}
       />
 
-      <TextField label="Fråga" value={prompt} onChangeText={setPrompt} placeholder="Skriv frågan här" maxLength={500} multiline />
+      <TextField
+        label={t.form.question}
+        value={prompt}
+        onChangeText={setPrompt}
+        placeholder={t.form.questionPlaceholder}
+        maxLength={500}
+        multiline
+      />
 
       {rules && (
         <>
           <ThemedText type="label">
             {rules.correct[1] === 1
-              ? 'Alternativ (tryck på bokstaven för rätt svar)'
-              : `Alternativ (markera ${rules.correct[0]}–${rules.correct[1]} rätta)`}
+              ? t.form.optionsSingle
+              : t.form.optionsMulti(rules.correct[0], rules.correct[1])}
           </ThemedText>
           {options.map((text, i) => {
             const isCorrect = correct.includes(i);
@@ -192,7 +201,7 @@ export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }:
                 <Pressable
                   accessibilityRole={rules.correct[1] === 1 ? 'radio' : 'checkbox'}
                   accessibilityState={{ checked: isCorrect }}
-                  accessibilityLabel={`Markera ${LETTERS[i]} som rätt svar`}
+                  accessibilityLabel={t.form.markCorrect(LETTERS[i])}
                   onPress={() => toggleCorrect(i)}>
                   <Chamfer
                     style={styles.letter}
@@ -207,8 +216,8 @@ export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }:
                 </Pressable>
                 <TextInput
                   value={text}
-                  onChangeText={(t) => setOptions((prev) => prev.map((o, j) => (j === i ? t : o)))}
-                  placeholder={i >= rules.min ? 'Valfritt' : `Alternativ ${LETTERS[i]}`}
+                  onChangeText={(text) => setOptions((prev) => prev.map((o, j) => (j === i ? text : o)))}
+                  placeholder={i >= rules.min ? t.form.optional : t.form.option(LETTERS[i])}
                   placeholderTextColor={theme.textSecondary}
                   maxLength={120}
                   style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
@@ -217,29 +226,27 @@ export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }:
             );
           })}
           {options.length < rules.max && (
-            <Button title="+ Lägg till alternativ" variant="secondary" onPress={() => setOptions((prev) => [...prev, ''])} />
+            <Button title={t.form.addOption} variant="secondary" onPress={() => setOptions((prev) => [...prev, ''])} />
           )}
         </>
       )}
 
       {isFreeText && (
         <>
-          <ThemedText type="label">Antal svar per lag</ThemedText>
+          <ThemedText type="label">{t.form.answersPerTeam}</ThemedText>
           <Chips
             items={[1, 2, 3, 4].map((n) => ({ key: String(n), label: String(n) }))}
             value={String(fields)}
             onChange={(k) => setFields(Number(k))}
           />
-          <ThemedText type="label">Facit (valfritt)</ThemedText>
-          <ThemedText themeColor="textSecondary">
-            Svar som matchar facit föreslås som godkända. Du rättar alltid själv innan svaret visas.
-          </ThemedText>
+          <ThemedText type="label">{t.form.keyOptional}</ThemedText>
+          <ThemedText themeColor="textSecondary">{t.form.keyHint}</ThemedText>
           {keyAnswers.slice(0, fields).map((text, i) => (
             <TextInput
               key={i}
               value={text}
-              onChangeText={(t) => setKeyAnswers((prev) => prev.map((a, j) => (j === i ? t : a)))}
-              placeholder={fields > 1 ? `Rätt svar ${i + 1}` : 'Rätt svar'}
+              onChangeText={(text) => setKeyAnswers((prev) => prev.map((a, j) => (j === i ? text : a)))}
+              placeholder={fields > 1 ? t.form.correctN(i + 1) : t.common.correctAnswer}
               placeholderTextColor={theme.textSecondary}
               maxLength={120}
               style={[styles.input, { color: theme.text, borderColor: theme.border, backgroundColor: theme.background }]}
@@ -250,14 +257,12 @@ export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }:
 
       {isList && (
         <>
-          <ThemedText type="label">Godkända svar (valfritt, ett per rad)</ThemedText>
-          <ThemedText themeColor="textSecondary">
-            Svar som finns i listan föreslås som godkända. Du rättar alltid själv innan svaret visas.
-          </ThemedText>
+          <ThemedText type="label">{t.form.listKey}</ThemedText>
+          <ThemedText themeColor="textSecondary">{t.form.listKeyHint}</ThemedText>
           <TextInput
             value={listKey}
             onChangeText={setListKey}
-            placeholder={'Skåne\nUppland\nDalarna'}
+            placeholder={t.form.listKeyPlaceholder}
             placeholderTextColor={theme.textSecondary}
             multiline
             style={[
@@ -273,29 +278,29 @@ export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }:
         <View style={styles.optionRow}>
           <View style={{ flex: 2 }}>
             <TextField
-              label="Rätt svar"
+              label={t.common.correctAnswer}
               value={value}
               onChangeText={setValue}
-              placeholder="T.ex. 2097"
+              placeholder={t.common.example('2097')}
               keyboardType="numbers-and-punctuation"
             />
           </View>
           <View style={{ flex: 1 }}>
-            <TextField label="Enhet (valfri)" value={unit} onChangeText={setUnit} placeholder="m" maxLength={20} />
+            <TextField label={t.form.unit} value={unit} onChangeText={setUnit} placeholder="m" maxLength={20} />
           </View>
         </View>
       )}
 
-      <ThemedText type="label">Tidsgräns</ThemedText>
+      <ThemedText type="label">{t.form.timeLimit}</ThemedText>
       <Chips
-        items={(isList ? LIST_TIME_LIMITS : TIME_LIMITS).map((l) => ({ key: String(l), label: l ? `${l} s` : 'Ingen' }))}
+        items={(isList ? LIST_TIME_LIMITS : TIME_LIMITS).map((l) => ({ key: String(l), label: l ? t.common.seconds(l) : t.form.noTimeLimit }))}
         value={String(timeLimit)}
         onChange={(k) => setTimeLimit(k === 'null' ? null : Number(k))}
       />
 
-      <ThemedText type="label">Poäng</ThemedText>
+      <ThemedText type="label">{t.form.points}</ThemedText>
       <Chips
-        items={POINTS.map((p) => ({ key: String(p), label: `${p} p` }))}
+        items={POINTS.map((p) => ({ key: String(p), label: t.common.points(p) }))}
         value={String(points)}
         onChange={(k) => setPoints(Number(k))}
       />
@@ -303,12 +308,12 @@ export function QuestionForm({ quizId, question, answerKey, onSaved, onCancel }:
       <ErrorText>{error}</ErrorText>
       {problem && prompt.trim() !== '' && <ThemedText themeColor="textSecondary">{problem}</ThemedText>}
       <Button
-        title={question ? 'Spara ändringar' : 'Lägg till fråga'}
+        title={question ? t.form.save : t.form.add}
         onPress={save}
         loading={busy}
         disabled={problem !== null}
       />
-      {onCancel && <Button title="Avbryt" variant="secondary" onPress={onCancel} />}
+      {onCancel && <Button title={t.common.cancel} variant="secondary" onPress={onCancel} />}
     </Card>
   );
 }

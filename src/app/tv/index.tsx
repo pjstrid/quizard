@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
 import { FontFamily } from '@/constants/theme';
+import { useT } from '@/i18n';
 import { Button, ErrorText, Screen, TextField } from '@/components/ui';
 import { friendlyError, supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/auth-provider';
@@ -11,6 +12,7 @@ import { useAuth } from '@/providers/auth-provider';
 export default function TvPairScreen() {
   const params = useLocalSearchParams<{ code?: string }>();
   const { session } = useAuth();
+  const t = useT();
   const [code, setCode] = useState(params.code?.toUpperCase() ?? '');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,15 +38,13 @@ export default function TvPairScreen() {
 
   return (
     <Screen centered>
-      <ThemedText type="subtitle">Storskärm</ThemedText>
-      <ThemedText themeColor="textSecondary">
-        Quizmastern hittar skärmkoden i sin app under ”Visa på storskärm”.
-      </ThemedText>
+      <ThemedText type="subtitle">{t.tv.pairTitle}</ThemedText>
+      <ThemedText themeColor="textSecondary">{t.tv.pairHint}</ThemedText>
       <TextField
-        label="Skärmkod"
+        label={t.tv.code}
         value={code}
         onChangeText={(t) => setCode(t.toUpperCase())}
-        placeholder="T.ex. X7K2QP"
+        placeholder={t.common.example('X7K2QP')}
         autoCapitalize="characters"
         autoCorrect={false}
         maxLength={6}
@@ -52,7 +52,7 @@ export default function TvPairScreen() {
         style={{ fontSize: 26, letterSpacing: 6, fontFamily: FontFamily.display[800] }}
       />
       <ErrorText>{error}</ErrorText>
-      <Button title="Anslut" onPress={pair} loading={busy} disabled={code.trim().length !== 6} />
+      <Button title={t.tv.connect} onPress={pair} loading={busy} disabled={code.trim().length !== 6} />
     </Screen>
   );
 }

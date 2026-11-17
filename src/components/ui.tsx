@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState, type PropsWithChildren, type ReactNode } from 'react';
+import { HeaderHeightContext } from 'expo-router/react-navigation';
+import { useContext, useEffect, useRef, useState, type PropsWithChildren, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,6 +18,7 @@ import { Chamfer } from '@/components/chamfer';
 import { ThemedText } from '@/components/themed-text';
 import { FontFamily, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useT } from '@/i18n';
 
 /** A faint technical grid behind every screen. */
 export function GridBackground() {
@@ -30,17 +34,34 @@ export function GridBackground() {
   );
 }
 
-/** Page wrapper: safe area, scroll, centered max width. */
+/**
+ * Page wrapper: safe area, scroll, centered max width.
+ *
+ * Keeps the focused text field above the on-screen keyboard: on iOS the
+ * scroll view adds a bottom inset and scrolls the field into view
+ * (`automaticallyAdjustKeyboardInsets`); on Android (edge-to-edge, so the
+ * window no longer resizes) the view shrinks with `KeyboardAvoidingView`.
+ */
 export function Screen({ children, centered }: PropsWithChildren<{ centered?: boolean }>) {
   const theme = useTheme();
+  // undefined outside a navigator (e.g. the setup screen) – then there is no header to offset.
+  const headerHeight = useContext(HeaderHeightContext) ?? 0;
   return (
     <SafeAreaView edges={['bottom', 'left', 'right']} style={{ flex: 1, backgroundColor: theme.background }}>
       <GridBackground />
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={[styles.scroll, centered && { flexGrow: 1, justifyContent: 'center' }]}>
-        <View style={styles.content}>{children}</View>
-      </ScrollView>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        enabled={Platform.OS === 'android'}
+        behavior="padding"
+        keyboardVerticalOffset={headerHeight}>
+        <ScrollView
+          automaticallyAdjustKeyboardInsets
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          contentContainerStyle={[styles.scroll, centered && { flexGrow: 1, justifyContent: 'center' }]}>
+          <View style={styles.content}>{children}</View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -96,7 +117,7 @@ export function Button({ title, onPress, variant = 'primary', loading, disabled,
  */
 export function ConfirmButton({
   title,
-  confirmTitle = 'Säker? Tryck igen',
+  confirmTitle,
   onConfirm,
   loading,
   disabled,
@@ -107,6 +128,7 @@ export function ConfirmButton({
   loading?: boolean;
   disabled?: boolean;
 }) {
+  const t = useT();
   const [armed, setArmed] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -125,7 +147,7 @@ export function ConfirmButton({
   }
 
   return (
-    <Button title={armed ? confirmTitle : title} variant="danger" onPress={press} loading={loading} disabled={disabled} />
+    <Button title={armed ? (confirmTitle ?? t.common.confirmAgain) : title} variant="danger" onPress={press} loading={loading} disabled={disabled} />
   );
 }
 

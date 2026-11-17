@@ -4,6 +4,7 @@ import { ChoiceList } from '@/components/choice-list';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui';
 import { useTheme } from '@/hooks/use-theme';
+import { useT } from '@/i18n';
 import {
   correctIndexes,
   describeAnswer,
@@ -34,7 +35,8 @@ type Props = {
 /** Read-only view of a question: options or numeric answers, with the correct answer when given. */
 export function QuestionBody({ question, answerKey, payload, large, hideHint, grading }: Props) {
   const theme = useTheme();
-  const hint = hideHint ? null : typeHint(question);
+  const t = useT();
+  const hint = hideHint ? null : typeHint(t, question);
 
   if (isManualType(question.type)) {
     const entries = manualEntries(question, payload);
@@ -45,7 +47,7 @@ export function QuestionBody({ question, answerKey, payload, large, hideHint, gr
         {payload != null && (
           <Card>
             <ThemedText type="label">
-              ERT SVAR
+              {t.common.yourAnswer}
             </ThemedText>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {entries.map((text, i) => {
@@ -54,7 +56,7 @@ export function QuestionBody({ question, answerKey, payload, large, hideHint, gr
                 return (
                   <ThemedText key={i} style={{ fontSize: large ? 20 : 16, fontWeight: 600, color }}>
                     {mark ? `${mark} ` : ''}
-                    {text.trim() || '(tomt)'}
+                    {text.trim() || t.common.empty}
                   </ThemedText>
                 );
               })}
@@ -64,7 +66,7 @@ export function QuestionBody({ question, answerKey, payload, large, hideHint, gr
         {answerKey != null && keyAnswers.length > 0 && (
           <Card>
             <ThemedText type="label">
-              {question.type === 'list_timed' ? 'GODKÄNDA SVAR' : 'FACIT'}
+              {question.type === 'list_timed' ? t.common.acceptedAnswers : t.common.key}
             </ThemedText>
             <ThemedText style={{ fontSize: large ? 22 : 18, lineHeight: large ? 30 : 24, fontWeight: 700, color: theme.success }}>
               {keyAnswers.join(', ')}
@@ -89,24 +91,24 @@ export function QuestionBody({ question, answerKey, payload, large, hideHint, gr
     );
   }
 
-  const correct = describeKey(question, answerKey);
+  const correct = describeKey(t, question, answerKey);
   return (
     <View style={{ gap: 8 }}>
       {hint && <ThemedText themeColor="textSecondary">{hint}</ThemedText>}
       {payload != null && (
         <Card>
           <ThemedText type="label">
-            ERT SVAR
+            {t.common.yourAnswer}
           </ThemedText>
           <ThemedText style={{ fontSize: large ? 28 : 20, lineHeight: large ? 34 : 26, fontWeight: 700 }}>
-            {describeAnswer(question, payload)}
+            {describeAnswer(t, question, payload)}
           </ThemedText>
         </Card>
       )}
       {correct && (
         <Card>
           <ThemedText type="label">
-            RÄTT SVAR
+            {t.common.correctAnswer}
           </ThemedText>
           <ThemedText
             style={{ fontSize: large ? 36 : 22, lineHeight: large ? 44 : 28, fontWeight: 800, color: theme.success }}>

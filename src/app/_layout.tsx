@@ -14,6 +14,7 @@ import { useEffect } from 'react';
 import { ThemedText } from '@/components/themed-text';
 import { Screen } from '@/components/ui';
 import { Colors, stackScreenOptions } from '@/constants/theme';
+import { useT } from '@/i18n';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { AuthProvider } from '@/providers/auth-provider';
 
@@ -33,6 +34,7 @@ const navigationTheme = {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const t = useT();
   const [fontsLoaded, fontError] = useFonts({
     Orbitron_500Medium,
     Orbitron_600SemiBold,
@@ -56,10 +58,10 @@ export default function RootLayout() {
     <ThemeProvider value={navigationTheme}>
       {isSupabaseConfigured ? (
         <AuthProvider>
-          <Stack screenOptions={stackScreenOptions}>
+          <Stack screenOptions={{ ...stackScreenOptions, headerBackTitle: t.common.back }}>
             <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="join" options={{ title: 'Gå med' }} />
-            <Stack.Screen name="login" options={{ title: 'Quizmaster' }} />
+            <Stack.Screen name="join" options={{ title: t.nav.join }} />
+            <Stack.Screen name="login" options={{ title: t.nav.quizmaster }} />
             <Stack.Screen
               name="play/[sessionId]"
               options={{
@@ -69,17 +71,14 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen name="host" options={{ headerShown: false }} />
-            <Stack.Screen name="tv/index" options={{ title: 'Storskärm' }} />
+            <Stack.Screen name="tv/index" options={{ title: t.nav.bigScreen }} />
             <Stack.Screen name="tv/[sessionId]" options={{ headerShown: false }} />
           </Stack>
         </AuthProvider>
       ) : (
         <Screen centered>
-          <ThemedText type="subtitle">Supabase är inte konfigurerat</ThemedText>
-          <ThemedText>
-            Kopiera .env.example till .env, fyll i URL och publishable key från ditt Supabase-projekt och
-            starta om Expo.
-          </ThemedText>
+          <ThemedText type="subtitle">{t.setup.title}</ThemedText>
+          <ThemedText>{t.setup.body}</ThemedText>
         </Screen>
       )}
     </ThemeProvider>

@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui';
 import { FontFamily, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useT } from '@/i18n';
 import {
   parseNumber,
   typeHint,
@@ -32,7 +33,8 @@ type Props = {
  */
 export function AnswerInput(props: Props) {
   const { question } = props;
-  const hint = typeHint(question);
+  const t = useT();
+  const hint = typeHint(t, question);
   return (
     <View style={{ gap: Spacing.three }}>
       {hint && <ThemedText themeColor="textSecondary">{hint}</ThemedText>}
@@ -51,6 +53,7 @@ export function AnswerInput(props: Props) {
 
 function FreeTextInput({ question, busy, onSubmit }: Props) {
   const theme = useTheme();
+  const t = useT();
   const fields = (question.config as FreeTextConfig).fields;
   const [answers, setAnswers] = useState(() => Array.from({ length: fields }, () => ''));
   const anyFilled = answers.some((a) => a.trim());
@@ -62,15 +65,15 @@ function FreeTextInput({ question, busy, onSubmit }: Props) {
           key={i}
           value={text}
           onChangeText={(t) => setAnswers((prev) => prev.map((a, j) => (j === i ? t : a)))}
-          placeholder={fields > 1 ? `Svar ${i + 1}` : 'Ert svar'}
+          placeholder={fields > 1 ? t.answer.answerN(i + 1) : t.common.yourAnswer}
           placeholderTextColor={theme.textSecondary}
-          accessibilityLabel={fields > 1 ? `Svar ${i + 1}` : 'Ert svar'}
+          accessibilityLabel={fields > 1 ? t.answer.answerN(i + 1) : t.common.yourAnswer}
           maxLength={120}
           style={[styles.input, styles.textInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundElement }]}
         />
       ))}
       <Button
-        title="Lås in svar"
+        title={t.common.lockIn}
         onPress={() => onSubmit({ answers: answers.map((a) => a.trim()) })}
         loading={busy}
         disabled={!anyFilled}
@@ -87,6 +90,7 @@ const MAX_ITEMS = 100;
  */
 function ListInput({ question, busy, onSubmit, startedAt }: Props) {
   const theme = useTheme();
+  const t = useT();
   const [items, setItems] = useState<string[]>([]);
   const [draft, setDraft] = useState('');
   const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
@@ -119,9 +123,9 @@ function ListInput({ question, busy, onSubmit, startedAt }: Props) {
           onSubmitEditing={add}
           submitBehavior="submit"
           editable={!timeUp}
-          placeholder="Skriv ett svar och tryck enter"
+          placeholder={t.answer.listPlaceholder}
           placeholderTextColor={theme.textSecondary}
-          accessibilityLabel="Nytt svar"
+          accessibilityLabel={t.answer.newEntry}
           maxLength={80}
           autoFocus
           style={[styles.input, styles.textInput, { color: theme.text, borderColor: theme.border, backgroundColor: theme.backgroundElement }]}
@@ -130,14 +134,14 @@ function ListInput({ question, busy, onSubmit, startedAt }: Props) {
       </View>
 
       <ThemedText type="label">
-        {items.length} SVAR
+        {t.answer.entries(items.length)}
       </ThemedText>
       <View style={styles.items}>
         {items.map((item, i) => (
           <Pressable
             key={`${i}-${item}`}
             accessibilityRole="button"
-            accessibilityLabel={`Ta bort ${item}`}
+            accessibilityLabel={t.answer.remove(item)}
             disabled={timeUp}
             onPress={() => setItems((prev) => prev.filter((_, j) => j !== i))}>
             <Chamfer style={styles.item} cut={7} fill={theme.backgroundElement} stroke={theme.border} strokeWidth={1}>
@@ -150,16 +154,17 @@ function ListInput({ question, busy, onSubmit, startedAt }: Props) {
 
       {timeUp ? (
         <ThemedText themeColor="textSecondary" style={{ textAlign: 'center' }}>
-          {busy ? 'Skickar in listan …' : items.length ? 'Tiden är ute – listan skickas in.' : 'Tiden är ute.'}
+          {busy ? t.answer.submittingList : items.length ? t.answer.listTimeUp : t.answer.timeUp}
         </ThemedText>
       ) : (
-        <Button title="Lås in listan nu" variant="secondary" onPress={submit} loading={busy} disabled={items.length === 0} />
+        <Button title={t.answer.lockListNow} variant="secondary" onPress={submit} loading={busy} disabled={items.length === 0} />
       )}
     </>
   );
 }
 
 function ChoiceInput({ question, busy, onSubmit }: Props) {
+  const t = useT();
   const [selected, setSelected] = useState<number[]>([]);
   const config = question.config as ChoiceConfig;
   const multi = question.type === 'multi_choice';
@@ -180,7 +185,7 @@ function ChoiceInput({ question, busy, onSubmit }: Props) {
     <>
       <ChoiceList large options={config.options} selected={selected} onSelect={toggle} />
       <Button
-        title={multi && selected.length < required ? `Välj ${required - selected.length} till` : 'Lås in svar'}
+        title={multi && selected.length < required ? t.answer.pickMore(required - selected.length) : t.common.lockIn}
         onPress={submit}
         loading={busy}
         disabled={selected.length !== required}
@@ -191,13 +196,14 @@ function ChoiceInput({ question, busy, onSubmit }: Props) {
 
 function NumericInput({ question, busy, onSubmit }: Props) {
   const theme = useTheme();
+  const t = useT();
   const [low, setLow] = useState('');
   const [high, setHigh] = useState('');
   const unit = (question.config as NumericConfig).unit;
   const isRange = question.type === 'range';
 
-  const lowValue = parseNumber(low);
-  const highValue = parseNumber(high);
+  const lowValue = parseNumber(low, t.decimal);
+  const highValue = parseNumber(high, t.decimal);
   const valid = isRange ? lowValue !== null && highValue !== null && lowValue <= highValue : lowValue !== null;
 
   function submit() {
@@ -213,10 +219,10 @@ function NumericInput({ question, busy, onSubmit }: Props) {
         <TextInput
           value={low}
           onChangeText={setLow}
-          placeholder={isRange ? 'Från' : 'Ert svar'}
+          placeholder={isRange ? t.answer.from : t.common.yourAnswer}
           placeholderTextColor={theme.textSecondary}
           keyboardType="numbers-and-punctuation"
-          accessibilityLabel={isRange ? 'Från' : 'Ert svar'}
+          accessibilityLabel={isRange ? t.answer.from : t.common.yourAnswer}
           style={inputStyle}
         />
         {isRange && (
@@ -225,10 +231,10 @@ function NumericInput({ question, busy, onSubmit }: Props) {
             <TextInput
               value={high}
               onChangeText={setHigh}
-              placeholder="Till"
+              placeholder={t.answer.to}
               placeholderTextColor={theme.textSecondary}
               keyboardType="numbers-and-punctuation"
-              accessibilityLabel="Till"
+              accessibilityLabel={t.answer.to}
               onSubmitEditing={submit}
               style={inputStyle}
             />
@@ -237,9 +243,9 @@ function NumericInput({ question, busy, onSubmit }: Props) {
         {unit ? <ThemedText style={styles.unit}>{unit}</ThemedText> : null}
       </View>
       {isRange && lowValue !== null && highValue !== null && lowValue > highValue && (
-        <ThemedText style={{ color: theme.danger }}>{'”Från” måste vara mindre än ”Till”.'}</ThemedText>
+        <ThemedText style={{ color: theme.danger }}>{t.answer.fromAfterTo}</ThemedText>
       )}
-      <Button title="Lås in svar" onPress={submit} loading={busy} disabled={!valid} />
+      <Button title={t.common.lockIn} onPress={submit} loading={busy} disabled={!valid} />
     </>
   );
 }
