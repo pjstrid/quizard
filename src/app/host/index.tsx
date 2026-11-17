@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ConfirmButton, ErrorText, Screen, TextField } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
+import { useT } from '@/i18n';
 import { friendlyError, supabase } from '@/lib/supabase';
 import { startSession } from '@/lib/start-session';
 import type { Quiz } from '@/lib/types';
@@ -13,6 +14,7 @@ import { useAuth } from '@/providers/auth-provider';
 
 export default function HostHomeScreen() {
   const { session } = useAuth();
+  const t = useT();
   const resume = useResumeTarget();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [title, setTitle] = useState('');
@@ -64,14 +66,14 @@ export default function HostHomeScreen() {
 
   return (
     <Screen>
-      <ThemedText themeColor="textSecondary">Inloggad som {session?.user.email}</ThemedText>
+      <ThemedText themeColor="textSecondary">{t.hostHome.signedInAs(session?.user.email ?? '')}</ThemedText>
 
       {resume?.kind === 'host' && (
         <Card highlight>
-          <ThemedText type="label">{resume.status === 'lobby' ? 'ÖPPEN LOBBY' : 'SPEL PÅGÅR'}</ThemedText>
-          <ThemedText themeColor="textSecondary">Kod {resume.joinCode}</ThemedText>
+          <ThemedText type="label">{resume.status === 'lobby' ? t.hostHome.openLobby : t.hostHome.gameRunning}</ThemedText>
+          <ThemedText themeColor="textSecondary">{t.common.code(resume.joinCode)}</ThemedText>
           <Button
-            title="Fortsätt spelet"
+            title={t.hostHome.resume}
             onPress={() => router.push({ pathname: '/host/session/[id]', params: { id: resume.sessionId } })}
           />
         </Card>
@@ -79,14 +81,14 @@ export default function HostHomeScreen() {
 
       <Card>
         <TextField
-          label="Nytt quiz"
+          label={t.hostHome.newQuiz}
           value={title}
           onChangeText={setTitle}
-          placeholder="T.ex. Fredagsquiz hos Anna"
+          placeholder={t.common.example(t.hostHome.newQuizExample)}
           maxLength={120}
           onSubmitEditing={() => title.trim() && createQuiz()}
         />
-        <Button title="Skapa quiz" onPress={createQuiz} loading={busy === 'create'} disabled={!title.trim()} />
+        <Button title={t.hostHome.create} onPress={createQuiz} loading={busy === 'create'} disabled={!title.trim()} />
       </Card>
 
       <ErrorText>{error}</ErrorText>
@@ -98,20 +100,20 @@ export default function HostHomeScreen() {
           </ThemedText>
           <View style={{ flexDirection: 'row', gap: Spacing.two, flexWrap: 'wrap' }}>
             <View style={{ flex: 1, minWidth: 140 }}>
-              <Button title="Starta spel" onPress={() => start(quiz)} loading={busy === quiz.id} />
+              <Button title={t.hostHome.startGame} onPress={() => start(quiz)} loading={busy === quiz.id} />
             </View>
             <Button
-              title="Frågor"
+              title={t.hostHome.questions}
               variant="secondary"
               onPress={() => router.push({ pathname: '/host/quiz/[id]', params: { id: quiz.id } })}
             />
-            <ConfirmButton title="Ta bort" onConfirm={() => deleteQuiz(quiz)} />
+            <ConfirmButton title={t.common.delete} onConfirm={() => deleteQuiz(quiz)} />
           </View>
         </Card>
       ))}
-      {quizzes.length === 0 && <ThemedText themeColor="textSecondary">Du har inga quiz ännu.</ThemedText>}
+      {quizzes.length === 0 && <ThemedText themeColor="textSecondary">{t.hostHome.noQuizzes}</ThemedText>}
 
-      <Button title="Logga ut" variant="secondary" onPress={() => supabase.auth.signOut()} />
+      <Button title={t.common.signOut} variant="secondary" onPress={() => supabase.auth.signOut()} />
     </Screen>
   );
 }

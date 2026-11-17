@@ -9,12 +9,14 @@ import { QuestionBody } from '@/components/question-body';
 import { Scoreboard } from '@/components/scoreboard';
 import { TeamList } from '@/components/team-list';
 import { TeamStatus } from '@/components/team-status';
+import { WinnerBanner } from '@/components/winner-banner';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, Loading, Screen } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useAnswers, useCurrentQuestion, useScoreboard } from '@/hooks/use-game';
 import { useSessionLive } from '@/hooks/use-session-live';
 import { useTheme } from '@/hooks/use-theme';
+import { useT } from '@/i18n';
 import { isManualType } from '@/lib/question-types';
 import { supabase } from '@/lib/supabase';
 import type { GameSession, Team } from '@/lib/types';
@@ -27,6 +29,7 @@ import type { GameSession, Team } from '@/lib/types';
 export default function TvScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const theme = useTheme();
+  const t = useT();
   const { width } = useWindowDimensions();
   const wide = width >= 900;
   const { session, teams, loading } = useSessionLive(sessionId);
@@ -36,9 +39,9 @@ export default function TvScreen() {
   if (!session) {
     return (
       <Screen centered>
-        <ThemedText type="subtitle">Storskärmen är inte ansluten</ThemedText>
-        <ThemedText themeColor="textSecondary">Spelet kan ha avslutats, eller så kopplade quizmastern bort skärmen.</ThemedText>
-        <Button title="Anslut med ny kod" onPress={() => router.replace('/tv')} />
+        <ThemedText type="subtitle">{t.tv.notConnected}</ThemedText>
+        <ThemedText themeColor="textSecondary">{t.tv.notConnectedHint}</ThemedText>
+        <Button title={t.tv.reconnect} onPress={() => router.replace('/tv')} />
       </Screen>
     );
   }
@@ -51,7 +54,7 @@ export default function TvScreen() {
         <View style={{ flex: 1 }} />
         {session.status === 'playing' && (
           <ThemedText display themeColor="textSecondary" style={styles.headerCode}>
-            Gå med: {session.join_code}
+            {t.tv.joinHeader(session.join_code)}
           </ThemedText>
         )}
       </View>
@@ -89,6 +92,7 @@ function Columns({ wide, left, right }: { wide: boolean; left: ReactNode; right:
 
 function Lobby({ session, teams, wide }: { session: GameSession; teams: Team[]; wide: boolean }) {
   const theme = useTheme();
+  const t = useT();
   const joinAddress = Platform.OS === 'web' ? `${window.location.host}/join` : null;
   return (
     <Columns
@@ -96,7 +100,7 @@ function Lobby({ session, teams, wide }: { session: GameSession; teams: Team[]; 
       left={
         <Card highlight>
           <ThemedText style={styles.lead}>
-            Gå med{joinAddress ? ` på ${joinAddress}` : ' i QUIZARD-appen'} med koden
+            {t.tv.joinAt(joinAddress)}
           </ThemedText>
           <ThemedText display style={[styles.joinCode, { color: theme.primary }]} numberOfLines={1}>
             {session.join_code}
@@ -104,12 +108,12 @@ function Lobby({ session, teams, wide }: { session: GameSession; teams: Team[]; 
           <View style={styles.joinRow}>
             <JoinQr code={session.join_code} size={wide ? 200 : 170} />
             <View style={{ flex: 1, minWidth: 180, gap: Spacing.two }}>
-              <ThemedText type="label">Eller skanna</ThemedText>
-              <ThemedText style={styles.qrHint}>Rikta mobilkameran mot koden – lagnamnet är allt som behövs.</ThemedText>
+              <ThemedText type="label">{t.tv.orScan}</ThemedText>
+              <ThemedText style={styles.qrHint}>{t.tv.scanHint}</ThemedText>
             </View>
           </View>
           <ThemedText themeColor="textSecondary" style={styles.lead}>
-            Väntar på att quizmastern startar …
+            {t.tv.waiting}
           </ThemedText>
         </Card>
       }
@@ -120,6 +124,7 @@ function Lobby({ session, teams, wide }: { session: GameSession; teams: Team[]; 
 
 function Playing({ session, teams, wide }: { session: GameSession; teams: Team[]; wide: boolean }) {
   const theme = useTheme();
+  const t = useT();
   const { question, answerKey } = useCurrentQuestion(session);
   const answers = useAnswers(session.id, question?.id);
   const scores = useScoreboard(
@@ -142,12 +147,12 @@ function Playing({ session, teams, wide }: { session: GameSession; teams: Team[]
         // Each new question slides in on the big screen (#6).
         <Animated.View key={question.id} entering={FadeInDown.springify().damping(16)} style={styles.column}>
           <ThemedText display themeColor="textSecondary" style={styles.counter}>
-            FRÅGA {session.question_index} AV {session.question_count}
+            {t.common.questionOf(session.question_index, session.question_count)}
           </ThemedText>
           <ThemedText style={styles.prompt}>{question.prompt}</ThemedText>
           {session.phase === 'question' && <Countdown secondsLeft={secondsLeft} />}
           {session.phase === 'locked' && isManualType(question.type) && (
-            <ThemedText style={[styles.lead, { color: theme.primary }]}>Quizmastern rättar …</ThemedText>
+            <ThemedText style={[styles.lead, { color: theme.primary }]}>{t.tv.grading}</ThemedText>
           )}
           <QuestionBody large question={question} answerKey={revealed ? answerKey : null} />
         </Animated.View>
@@ -156,7 +161,7 @@ function Playing({ session, teams, wide }: { session: GameSession; teams: Team[]
         <>
           <Card>
             <ThemedText type="label">
-              {revealed ? 'RESULTAT' : `LÅSTA SVAR ${lockedCount} / ${teams.length}`}
+              {revealed ? t.common.results : t.tv.lockedAnswers(lockedCount, teams.length)}
             </ThemedText>
             {teams.map((team) => (
               <TeamStatus
@@ -178,20 +183,16 @@ function Playing({ session, teams, wide }: { session: GameSession; teams: Team[]
 }
 
 function Finished({ session }: { session: GameSession }) {
-  const theme = useTheme();
+  const t = useT();
   const scores = useScoreboard(session.id, `${session.status}-${session.scores_version}`);
   // Nobody wins with zero points.
   const winners = scores.filter((s) => s.score > 0 && s.score === scores[0].score);
   return (
     <View style={{ gap: Spacing.four, alignItems: 'center' }}>
-      <ThemedText display style={styles.prompt}>Quizet är slut!</ThemedText>
-      {winners.length > 0 && (
-        <ThemedText display style={[styles.winner, { color: theme.primary }]}>
-          🏆 {winners.map((w) => w.name).join(' & ')}
-        </ThemedText>
-      )}
+      <ThemedText display style={styles.prompt}>{t.common.quizOver}</ThemedText>
+      {winners.length > 0 && <WinnerBanner large names={winners.map((w) => w.name)} />}
       <View style={{ width: '100%', maxWidth: 720 }}>
-        <Scoreboard rows={scores} title="SLUTRESULTAT" />
+        <Scoreboard rows={scores} title={t.common.finalResult} />
       </View>
     </View>
   );
@@ -211,5 +212,4 @@ const styles = StyleSheet.create({
   joinCode: { fontSize: 96, lineHeight: 116, fontWeight: 800, letterSpacing: 10, textAlign: 'center' },
   counter: { fontSize: 22, lineHeight: 30, fontWeight: 700 },
   prompt: { fontSize: 44, lineHeight: 54, fontWeight: 800 },
-  winner: { fontSize: 48, lineHeight: 60, fontWeight: 800 },
 });

@@ -6,6 +6,7 @@ import Svg, { Path, Rect } from 'react-native-svg';
 
 import { Chamfer } from '@/components/chamfer';
 import { useTheme } from '@/hooks/use-theme';
+import { useT } from '@/i18n';
 
 /**
  * Where a phone should go to join with a code:
@@ -22,6 +23,7 @@ export function joinUrl(code: string) {
 /** QR code that opens the join page with the code filled in. */
 export function JoinQr({ code, size = 200 }: { code: string; size?: number }) {
   const theme = useTheme();
+  const t = useT();
   const url = joinUrl(code);
 
   // One SVG path for all dark modules keeps it light even for large codes.
@@ -48,7 +50,7 @@ export function JoinQr({ code, size = 200 }: { code: string; size?: number }) {
       stroke={theme.primary}
       strokeWidth={3}
       glow="rgba(255, 210, 0, 0.3)">
-      <View accessible accessibilityRole="image" accessibilityLabel={`QR-kod för att gå med med koden ${code}`}>
+      <View accessible accessibilityRole="image" accessibilityLabel={t.tv.qrLabel(code)}>
         <Svg width={size} height={size} viewBox={`0 0 ${box} ${box}`}>
           <Rect width={box} height={box} fill={theme.answer} />
           <Path d={path} fill={theme.onAnswer} transform={`translate(${quiet} ${quiet})`} />

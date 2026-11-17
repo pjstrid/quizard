@@ -5,6 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ErrorText } from '@/components/ui';
 import { useDisplayCount } from '@/hooks/use-displays';
 import { useTheme } from '@/hooks/use-theme';
+import { useT } from '@/i18n';
 import { friendlyError, supabase } from '@/lib/supabase';
 
 /** Where a big screen opens QUIZARD: this site on web, or EXPO_PUBLIC_WEB_URL from the app. */
@@ -19,6 +20,7 @@ function tvAddress() {
  */
 export function DisplayPairing({ sessionId, compact }: { sessionId: string; compact?: boolean }) {
   const theme = useTheme();
+  const t = useT();
   const displays = useDisplayCount(sessionId);
   const [code, setCode] = useState<string | null>(null);
   const [open, setOpen] = useState(!compact);
@@ -39,12 +41,12 @@ export function DisplayPairing({ sessionId, compact }: { sessionId: string; comp
     if (error) setError(friendlyError(error));
   }
 
-  const status = displays > 0 ? `✓ ${displays === 1 ? 'En storskärm' : `${displays} storskärmar`} ansluten` : null;
+  const status = displays > 0 ? t.display.connected(displays) : null;
 
   if (!open) {
     return (
       <Button
-        title={status ? `${status} · visa koden` : 'Visa på storskärm'}
+        title={status ? t.display.showCodeShort(status) : t.display.showOnBigScreen}
         variant="secondary"
         onPress={() => setOpen(true)}
       />
@@ -55,33 +57,30 @@ export function DisplayPairing({ sessionId, compact }: { sessionId: string; comp
   return (
     <Card>
       <ThemedText type="label">
-        STORSKÄRM
+        {t.display.label}
       </ThemedText>
       {status && <ThemedText style={{ color: theme.success, fontWeight: 700 }}>{status}</ThemedText>}
       {code ? (
         <>
           <ThemedText>
-            Öppna {address ? <ThemedText style={{ fontWeight: 700 }}>{address}</ThemedText> : 'QUIZARD i webbläsaren'} på
-            tv:n eller datorn och skriv in koden:
+            {t.display.openAt}{' '}
+            {address ? <ThemedText style={{ fontWeight: 700 }}>{address}</ThemedText> : t.display.inBrowser}{' '}
+            {t.display.enterCode}
           </ThemedText>
           <ThemedText display style={[styles.code, { color: theme.primary }]} selectable>
             {code}
           </ThemedText>
-          <ThemedText themeColor="textSecondary">
-            Visa inte den här koden för lagen – storskärmen ser allas svar.
-          </ThemedText>
+          <ThemedText themeColor="textSecondary">{t.display.keepSecret}</ThemedText>
         </>
       ) : (
         <>
-          <ThemedText themeColor="textSecondary">
-            Visa frågor, vilka lag som låst in och resultat på en tv eller dator. Du styr och rättar härifrån.
-          </ThemedText>
-          <Button title="Visa skärmkod" onPress={showCode} loading={busy} />
+          <ThemedText themeColor="textSecondary">{t.display.intro}</ThemedText>
+          <Button title={t.display.showCode} onPress={showCode} loading={busy} />
         </>
       )}
       <ErrorText>{error}</ErrorText>
-      {displays > 0 && <Button title="Koppla bort storskärmen" variant="danger" onPress={disconnectAll} />}
-      {compact && <Button title="Dölj" variant="secondary" onPress={() => setOpen(false)} />}
+      {displays > 0 && <Button title={t.display.disconnect} variant="danger" onPress={disconnectAll} />}
+      {compact && <Button title={t.display.hide} variant="secondary" onPress={() => setOpen(false)} />}
     </Card>
   );
 }

@@ -5,6 +5,7 @@ import { Chamfer } from '@/components/chamfer';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useT } from '@/i18n';
 import { LETTERS } from '@/lib/question-types';
 
 type Props = {
@@ -20,6 +21,7 @@ type Props = {
 
 export function ChoiceList({ options, selected = [], correct, onSelect, disabled, large }: Props) {
   const theme = useTheme();
+  const t = useT();
   const revealed = !!correct && correct.length > 0;
 
   return (
@@ -34,7 +36,7 @@ export function ChoiceList({ options, selected = [], correct, onSelect, disabled
         const background = isCorrect ? theme.success : isWrongPick ? theme.dangerFill : theme.answer;
         const color = isCorrect ? theme.onSuccess : isWrongPick ? theme.onDanger : theme.onAnswer;
         const dimmed = revealed && !isCorrect && !isSelected;
-        const label = `${LETTERS[index]}: ${option}${isCorrect ? ', rätt svar' : ''}${isWrongPick ? ', fel svar' : ''}`;
+        const label = `${t.answer.optionLabel(LETTERS[index], option)}${isCorrect ? t.answer.isCorrect : ''}${isWrongPick ? t.answer.isWrong : ''}`;
 
         return (
           <Pressable

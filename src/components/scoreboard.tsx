@@ -5,6 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useT } from '@/i18n';
 import type { ScoreRow } from '@/lib/types';
 
 type Props = {
@@ -14,13 +15,14 @@ type Props = {
   highlightTeamId?: string;
 };
 
-export function Scoreboard({ rows, title = 'STÄLLNING', highlightTeamId }: Props) {
+export function Scoreboard({ rows, title, highlightTeamId }: Props) {
+  const t = useT();
   const theme = useTheme();
 
   return (
     <Card>
       <ThemedText type="label">
-        {title}
+        {title ?? t.common.standings}
       </ThemedText>
       {rows.map((row, i) => {
         // Teams with the same score share a placement.

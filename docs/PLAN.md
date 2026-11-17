@@ -82,4 +82,6 @@ Team phone ──submit_answer RPC (lock in)──► Postgres
 6. ✅ **Big-screen view** (#5): `/tv` pairing + read-only TV view.
 7. ✅ **Polish** (#6): QR code to join, animations, resume after reload, app icon and splash.
 
-After MVP: English UI (i18n), Chromecast/AirPlay, images in questions (Supabase Storage), sharing quizzes, public quizzes.
+8. ✅ **English UI** (#7): typed translations in `src/i18n/` (Swedish + English), device language by default with a picker on the start screen.
+
+After MVP: Chromecast/AirPlay, images in questions (Supabase Storage), sharing quizzes, public quizzes.

@@ -40,5 +40,5 @@ Closes #
 
 - [ ] `npm run typecheck`, `npm run lint` and `npm run test:db` pass
 - [ ] Tested on at least one device/simulator (or web)
-- [ ] User-facing text added in Swedish (English comes with i18n)
+- [ ] User-facing text added to both `src/i18n/sv.ts` and `src/i18n/en.ts`
 - [ ] Docs updated if behavior or setup changed

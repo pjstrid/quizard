@@ -3,7 +3,7 @@
 ## QUIZARD
 
 - Plan and architecture: docs/PLAN.md.
-- **Language:** everything in the repo is in English (branches, commits, PR descriptions, issues, docs, code comments). The app UI is Swedish for now; English UI comes later via i18n. The user chats in Swedish.
+- **Language:** everything in the repo is in English (branches, commits, PR descriptions, issues, docs, code comments). The app UI is translated: add every user-facing string to both `src/i18n/sv.ts` and `src/i18n/en.ts` (never hardcode UI text in components). The user chats in Swedish.
 - **Git workflow:** never commit to `main` directly. Use short-lived branches (`feat/…`, `fix/…`, `chore/…`, `docs/…`) and PRs that follow `.github/pull_request_template.md` and link the issue (`Closes #N`).
 - Database changes go in a new file under supabase/migrations/. Never edit an already-applied migration.
 - After a schema/RLS change: update and run `npm run test:db` (PGlite, supabase/tests/rls.test.mjs).
