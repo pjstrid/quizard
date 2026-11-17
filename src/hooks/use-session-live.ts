@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 
 import { friendlyError, supabase } from '@/lib/supabase';
 import type { GameSession, Team } from '@/lib/types';
@@ -67,8 +68,18 @@ export function useSessionLive(sessionId: string | undefined) {
         }
       });
 
+    // Coming back to the app (phone unlocked, tab refocused): realtime may have
+    // missed events while asleep, so fetch the current state again (#6).
+    const appState = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        loadSession();
+        loadTeams();
+      }
+    });
+
     return () => {
       active = false;
+      appState.remove();
       supabase.removeChannel(channel);
     };
   }, [sessionId]);

@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native';
 import { Countdown, useSecondsLeft } from '@/components/countdown';
 import { DisplayPairing } from '@/components/display-pairing';
 import { GradingPanel } from '@/components/grading-panel';
+import { JoinQr } from '@/components/join-qr';
 import { QuestionBody } from '@/components/question-body';
 import { Scoreboard } from '@/components/scoreboard';
 import { TeamList } from '@/components/team-list';
@@ -62,6 +63,11 @@ export default function HostSessionScreen() {
           <TeamList teams={teams} large />
           <DisplayPairing sessionId={session.id} />
           <ErrorText>{error}</ErrorText>
+          {teams.length === 0 && (
+            <ThemedText themeColor="textSecondary" style={styles.center}>
+              Quizet kan startas när minst ett lag har gått med.
+            </ThemedText>
+          )}
           <Button
             title="Starta quiz"
             onPress={() => run('start_quiz')}
@@ -91,6 +97,7 @@ function JoinCode({ code }: { code: string }) {
       <ThemedText display style={[styles.code, { color: theme.primary }]} selectable>
         {code}
       </ThemedText>
+      <JoinQr code={code} size={150} />
     </Card>
   );
 }

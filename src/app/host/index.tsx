@@ -8,10 +8,12 @@ import { Spacing } from '@/constants/theme';
 import { friendlyError, supabase } from '@/lib/supabase';
 import { startSession } from '@/lib/start-session';
 import type { Quiz } from '@/lib/types';
+import { useResumeTarget } from '@/hooks/use-resume';
 import { useAuth } from '@/providers/auth-provider';
 
 export default function HostHomeScreen() {
   const { session } = useAuth();
+  const resume = useResumeTarget();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [title, setTitle] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +65,17 @@ export default function HostHomeScreen() {
   return (
     <Screen>
       <ThemedText themeColor="textSecondary">Inloggad som {session?.user.email}</ThemedText>
+
+      {resume?.kind === 'host' && (
+        <Card highlight>
+          <ThemedText type="label">{resume.status === 'lobby' ? 'ÖPPEN LOBBY' : 'SPEL PÅGÅR'}</ThemedText>
+          <ThemedText themeColor="textSecondary">Kod {resume.joinCode}</ThemedText>
+          <Button
+            title="Fortsätt spelet"
+            onPress={() => router.push({ pathname: '/host/session/[id]', params: { id: resume.sessionId } })}
+          />
+        </Card>
+      )}
 
       <Card>
         <TextField

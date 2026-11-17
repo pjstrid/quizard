@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import Animated, { LinearTransition, ZoomIn } from 'react-native-reanimated';
 
 import { TeamMarker } from '@/components/team-marker';
 import { ThemedText } from '@/components/themed-text';
@@ -27,8 +27,10 @@ export function Scoreboard({ rows, title = 'STÄLLNING', highlightTeamId }: Prop
         const place = rows.findIndex((r) => r.score === row.score) + 1;
         const mine = row.team_id === highlightTeamId;
         return (
-          <View
+          // Rows glide to their new place when the order changes (#6).
+          <Animated.View
             key={row.team_id}
+            layout={LinearTransition.springify().damping(16)}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -43,17 +45,19 @@ export function Scoreboard({ rows, title = 'STÄLLNING', highlightTeamId }: Prop
             <TeamMarker color={row.color} />
             <ThemedText style={{ flex: 1, fontWeight: mine ? 700 : 500 }}>{row.name}</ThemedText>
             {/* The leader's score is the one yellow number on the board. */}
-            <ThemedText
-              display
-              style={{
-                fontWeight: 900,
-                fontSize: 20,
-                fontVariant: ['tabular-nums'],
-                color: place === 1 && row.score > 0 ? theme.primary : theme.text,
-              }}>
-              {row.score}
-            </ThemedText>
-          </View>
+            <Animated.View key={row.score} entering={ZoomIn.springify().damping(10)}>
+              <ThemedText
+                display
+                style={{
+                  fontWeight: 900,
+                  fontSize: 20,
+                  fontVariant: ['tabular-nums'],
+                  color: place === 1 && row.score > 0 ? theme.primary : theme.text,
+                }}>
+                {row.score}
+              </ThemedText>
+            </Animated.View>
+          </Animated.View>
         );
       })}
       {rows.length === 0 && <ThemedText themeColor="textSecondary">Inga lag.</ThemedText>}

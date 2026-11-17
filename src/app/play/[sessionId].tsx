@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 
 import { AnswerInput } from '@/components/answer-input';
 import { Countdown, useSecondsLeft } from '@/components/countdown';
@@ -166,7 +167,13 @@ function AnswerArea({
 function ResultBanner({ text, tone }: ReturnType<typeof resultText>) {
   const theme = useTheme();
   const color = { success: theme.success, danger: theme.danger, neutral: theme.textSecondary }[tone];
-  return <ThemedText style={[styles.result, { color }]}>{text}</ThemedText>;
+  return (
+    <Animated.View entering={ZoomIn.springify().damping(9)}>
+      <ThemedText display style={[styles.result, { color }]}>
+        {text}
+      </ThemedText>
+    </Animated.View>
+  );
 }
 
 function FinishedView({ session, team, onLeave }: { session: GameSession; team: Team; onLeave: () => void }) {

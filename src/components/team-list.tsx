@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 
 import { TeamMarker } from '@/components/team-marker';
 import { ThemedText } from '@/components/themed-text';
@@ -13,10 +13,15 @@ export function TeamList({ teams, large }: { teams: Team[]; large?: boolean }) {
       </ThemedText>
       {teams.length === 0 && <ThemedText themeColor="textSecondary">Inga lag ännu …</ThemedText>}
       {teams.map((team) => (
-        <View key={team.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        // New teams slide in as they join (#6).
+        <Animated.View
+          key={team.id}
+          entering={FadeInDown.springify().damping(14)}
+          layout={LinearTransition}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <TeamMarker color={team.color} size={large ? 24 : 16} />
           <ThemedText type={large ? 'subtitle' : 'default'}>{team.name}</ThemedText>
-        </View>
+        </Animated.View>
       ))}
     </Card>
   );
