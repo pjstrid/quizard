@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Countdown, useSecondsLeft } from '@/components/countdown';
@@ -9,6 +9,7 @@ import { QuestionBody } from '@/components/question-body';
 import { Scoreboard } from '@/components/scoreboard';
 import { TeamList } from '@/components/team-list';
 import { TeamStatus } from '@/components/team-status';
+import { TvCanvas } from '@/components/tv-canvas';
 import { WinnerBanner } from '@/components/winner-banner';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, Loading, Screen } from '@/components/ui';
@@ -30,8 +31,6 @@ export default function TvScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const theme = useTheme();
   const t = useT();
-  const { width } = useWindowDimensions();
-  const wide = width >= 900;
   const { session, teams, loading } = useSessionLive(sessionId);
   const title = useQuizTitle(session?.quiz_id);
 
@@ -47,22 +46,26 @@ export default function TvScreen() {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: theme.background }} contentContainerStyle={styles.root}>
-      <View style={styles.header}>
-        <ThemedText display style={[styles.logo, { color: theme.primary }]}>QUIZARD</ThemedText>
-        {title && <ThemedText style={styles.title}>{title}</ThemedText>}
-        <View style={{ flex: 1 }} />
-        {session.status === 'playing' && (
-          <ThemedText display themeColor="textSecondary" style={styles.headerCode}>
-            {t.tv.joinHeader(session.join_code)}
-          </ThemedText>
-        )}
-      </View>
+    <TvCanvas>
+      {(width) => (
+        <View style={styles.root}>
+          <View style={styles.header}>
+            <ThemedText display style={[styles.logo, { color: theme.primary }]}>QUIZARD</ThemedText>
+            {title && <ThemedText style={styles.title}>{title}</ThemedText>}
+            <View style={{ flex: 1 }} />
+            {session.status === 'playing' && (
+              <ThemedText display themeColor="textSecondary" style={styles.headerCode}>
+                {t.tv.joinHeader(session.join_code)}
+              </ThemedText>
+            )}
+          </View>
 
-      {session.status === 'lobby' && <Lobby session={session} teams={teams} wide={wide} />}
-      {session.status === 'playing' && <Playing session={session} teams={teams} wide={wide} />}
-      {session.status === 'finished' && <Finished session={session} />}
-    </ScrollView>
+          {session.status === 'lobby' && <Lobby session={session} teams={teams} wide={width >= 900} />}
+          {session.status === 'playing' && <Playing session={session} teams={teams} wide={width >= 900} />}
+          {session.status === 'finished' && <Finished session={session} />}
+        </View>
+      )}
+    </TvCanvas>
   );
 }
 
@@ -199,7 +202,7 @@ function Finished({ session }: { session: GameSession }) {
 }
 
 const styles = StyleSheet.create({
-  root: { padding: Spacing.five, gap: Spacing.four, minHeight: '100%' },
+  root: { padding: Spacing.five, gap: Spacing.four },
   header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, flexWrap: 'wrap' },
   logo: { fontSize: 32, lineHeight: 40, fontWeight: 800, letterSpacing: 4 },
   title: { fontSize: 24, lineHeight: 32, fontWeight: 600 },

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Button, Card, ErrorText } from '@/components/ui';
 import { useDisplayCount } from '@/hooks/use-displays';
+import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useT } from '@/i18n';
 import { friendlyError, supabase } from '@/lib/supabase';
@@ -26,6 +27,7 @@ export function DisplayPairing({ sessionId, compact }: { sessionId: string; comp
   const [open, setOpen] = useState(!compact);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [airplay, setAirplay] = useState(false);
 
   async function showCode() {
     setError(null);
@@ -71,6 +73,13 @@ export function DisplayPairing({ sessionId, compact }: { sessionId: string; comp
             {code}
           </ThemedText>
           <ThemedText themeColor="textSecondary">{t.display.keepSecret}</ThemedText>
+          <Button
+            title={t.display.airplay}
+            variant="secondary"
+            accessibilityLabel={t.display.airplay}
+            onPress={() => setAirplay((open) => !open)}
+          />
+          {airplay && <AirPlayGuide />}
         </>
       ) : (
         <>
@@ -85,6 +94,31 @@ export function DisplayPairing({ sessionId, compact }: { sessionId: string; comp
   );
 }
 
+/**
+ * AirPlay has no "cast this view" API in Expo Go, so a second device shows
+ * the big screen and mirrors its whole screen to the Apple TV (#8).
+ */
+function AirPlayGuide() {
+  const theme = useTheme();
+  const t = useT();
+  return (
+    <View style={styles.steps}>
+      {t.display.airplaySteps.map((step, i) => (
+        <View key={i} style={styles.step}>
+          <ThemedText display style={[styles.stepNumber, { color: theme.primary }]}>
+            {String(i + 1).padStart(2, '0')}
+          </ThemedText>
+          <ThemedText style={{ flex: 1 }}>{step}</ThemedText>
+        </View>
+      ))}
+      <ThemedText style={{ color: theme.danger, fontWeight: 700 }}>{t.display.airplayWarning}</ThemedText>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  steps: { gap: Spacing.two },
+  step: { flexDirection: 'row', gap: Spacing.three, alignItems: 'flex-start' },
+  stepNumber: { fontSize: 16, lineHeight: 24, fontWeight: 800 },
   code: { fontSize: 44, lineHeight: 54, fontWeight: 800, letterSpacing: 8, textAlign: 'center' },
 });
