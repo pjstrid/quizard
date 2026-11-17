@@ -63,6 +63,10 @@ Or run `npx expo start` and open the app in a simulator or in Expo Go.
 2. On a TV or laptop browser, open `<your web address>/tv` (or choose **Storskärm** on the start page) and enter the display code.
 3. The TV shows the join code, live lock-ins, results and the scoreboard. The quizmaster controls and grades from the phone.
 
+The big screen is laid out for 1280×720 and scaled to the window, so it looks the same on a 1080p TV browser as on a phone in landscape.
+
+**Apple TV (AirPlay):** open QUIZARD on a second iPhone, iPad or Mac, choose **Storskärm**, enter the display code, then mirror that device to the Apple TV (Control Center → Screen Mirroring). In the app the big screen turns to landscape and keeps the device awake. Don't mirror the quizmaster's phone, since grading shows the teams' answers. A native "second screen" over AirPlay or Chromecast would need a development build and is not part of this.
+
 To show the web address in the native app, set `EXPO_PUBLIC_WEB_URL` in `.env`. During development the TV can use `http://<your-computer's-ip>:8081/tv` on the same network.
 
 ## Checks

@@ -72,7 +72,7 @@ export default function RootLayout() {
             />
             <Stack.Screen name="host" options={{ headerShown: false }} />
             <Stack.Screen name="tv/index" options={{ title: t.nav.bigScreen }} />
-            <Stack.Screen name="tv/[sessionId]" options={{ headerShown: false }} />
+            <Stack.Screen name="tv/[sessionId]" options={{ headerShown: false, orientation: 'landscape' }} />
           </Stack>
         </AuthProvider>
       ) : (

@@ -251,6 +251,13 @@ export const sv = {
     showCode: 'Visa skärmkod',
     disconnect: 'Koppla bort storskärmen',
     hide: 'Dölj',
+    airplay: 'Apple TV (AirPlay)',
+    airplaySteps: [
+      'Öppna QUIZARD på en annan iPhone, iPad eller Mac och välj Storskärm.',
+      'Skriv in skärmkoden ovan. På en iPhone eller iPad vrids storskärmen till liggande läge.',
+      'Spegla skärmen till Apple TV: Kontrollcenter → Skärmdubblering.',
+    ],
+    airplayWarning: 'Spegla inte den här telefonen – när du rättar syns lagens svar.',
   },
 
   tv: {

@@ -75,8 +75,12 @@ export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
 
 
-/** Header style for every stack: Orbitron title, yellow back button. */
+/**
+ * Header style for every stack: Orbitron title, yellow back button.
+ * Screens are portrait; only the big screen turns to landscape (#8).
+ */
 export const stackScreenOptions = {
+  orientation: 'portrait' as const,
   headerTintColor: Colors.primary,
   headerShadowVisible: false,
   headerStyle: { backgroundColor: Colors.background },

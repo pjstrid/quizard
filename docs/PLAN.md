@@ -83,5 +83,6 @@ Team phone ──submit_answer RPC (lock in)──► Postgres
 7. ✅ **Polish** (#6): QR code to join, animations, resume after reload, app icon and splash.
 
 8. ✅ **English UI** (#7): typed translations in `src/i18n/` (Swedish + English), device language by default with a picker on the start screen.
+9. ✅ **Apple TV via AirPlay** (#8): a second iPhone/iPad/Mac shows the big screen and mirrors it. The big screen scales to any window, turns to landscape and keeps the device awake. Chromecast and a native AirPlay second screen need a development build and are left for later.
 
-After MVP: Chromecast/AirPlay, images in questions (Supabase Storage), sharing quizzes, public quizzes.
+After MVP: Chromecast, native AirPlay second screen (development build), images in questions (Supabase Storage), sharing quizzes, public quizzes.

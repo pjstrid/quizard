@@ -246,6 +246,13 @@ export const en: Strings = {
     showCode: 'Show screen code',
     disconnect: 'Disconnect the big screen',
     hide: 'Hide',
+    airplay: 'Apple TV (AirPlay)',
+    airplaySteps: [
+      'Open QUIZARD on another iPhone, iPad or Mac and choose Big screen.',
+      'Enter the screen code above. On an iPhone or iPad the big screen turns to landscape.',
+      'Mirror the screen to the Apple TV: Control Center → Screen Mirroring.',
+    ],
+    airplayWarning: "Don't mirror this phone – the teams' answers show while you grade.",
   },
 
   tv: {
